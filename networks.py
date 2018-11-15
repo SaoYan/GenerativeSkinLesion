@@ -117,7 +117,7 @@ class Generator(nn.Module):
         self.model = new_model
         self.module_names = get_module_names(self.model)
     def forward(self, x):
-        assert (len(x.size()) != 2) | (len(x.size()) != 4), 'Invalid input size!'
+        assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
         if len(x.size() == 2):
             x = x.view(x.size(0), x.size(1), 1, 1)
         return self.model(x)
@@ -207,3 +207,6 @@ class Discriminator(nn.Module):
         self.model = None
         self.model = new_model
         self.module_names = get_module_names(self.model)
+    def forward(self, x):
+        assert len(x.size()) == 4, 'Invalid input size!'
+        return self.model(x)
