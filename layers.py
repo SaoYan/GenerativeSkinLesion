@@ -9,7 +9,7 @@ class EqualizedConv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding):
         super(EqualizedConv2d, self).__init__()
         self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=True)
-        nn.init.kaiming_normal_(self.conv.weight, a=calculate_gain('conv2d'))
+        nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
         nn.init.constant_(self.conv.bias, val=0.)
         # conv_w = self.conv.weight.data.clone()
         self.scale = self.conv.weight.data.pow(2.).mean().sqrt()
@@ -21,13 +21,14 @@ class EqualizedLinear(nn.Module):
     def __init__(self, in_features, out_features):
         super(EqualizedLinear, self).__init__()
         self.linear = nn.Linear(in_features, out_features)
-        nn.init.kaiming_normal(self.linear.weight, a=calculate_gain('linear'))
+        nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
         nn.init.constant_(self.linear.bias, val=0.)
         # linear_w = self.linear.weight.data.clone()
         self.scale = self.linear.weight.data.pow(2.).mean().sqrt()
         self.linear.weight.data.copy_(self.linear.weight.data/self.scale)
     def forward(self, x):
-        return self.linear(x.mul(self.scale))
+        N = x.size(0)
+        return self.linear(x.view(N,-1).mul(self.scale))
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.
@@ -63,6 +64,14 @@ class PixelwiseNorm(nn.Module):
 #----------------------------------------------------------------------------
 # Smoothly fade in the new layers.
 
+class ConcatTable(nn.Module):
+    def __init__(self, layer1, layer2):
+        super(ConcatTable, self).__init__()
+        self.layer1 = layer1
+        self.layer2 = layer2
+    def forward(self,x):
+        return [self.layer1(x), self.layer2(x)]
+
 class Fadein(nn.Module):
     def __init__(self, alpha=0.):
         super(Fadein, self).__init__()
@@ -70,8 +79,9 @@ class Fadein(nn.Module):
     def set_alpha(self, delta):
         self.alpha = self.alpha + delta
         self.alpha = max(0, min(self.alpha, 1.0))
-    def forward(self, x_old, x_new):
-        return x_old.mul(1.0-self.alpha) + x_new.mul(self.alpha)
+    def forward(self, x):
+        # x is a ConcatTable, with x[0] being old layer, x[1] being the new layer to be faded in
+        return x[0].mul(1.0-self.alpha) + x[1].mul(self.alpha)
 
 #----------------------------------------------------------------------------
 class Flatten(nn.Module):
