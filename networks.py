@@ -82,7 +82,7 @@ class Generator(nn.Module):
     def grow_network(self):
         self.current_stage += 1
         assert self.current_stage <= self.stages, 'Exceeding the maximum stage number!'
-        print('\ngrowing network...\n')
+        print('\ngrowing Generator...\n')
         # copy the trained layers except "to_rgb"
         new_model = deepcopy_exclude(self.model, ['to_rgb'])
         # old block (used for fade in)
@@ -103,7 +103,7 @@ class Generator(nn.Module):
         self.module_names = get_module_names(self.model)
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
-        print('\nflushing network...\n')
+        print('\nflushing Generator...\n')
         new_block = deepcopy_layers(self.model.concat_block.layer2, 'new_block')
         new_to_rgb = deepcopy_layers(self.model.concat_block.layer2, 'new_to_rgb')
         # copy the previous trained layers (before ConcatTable and Fadein)
@@ -118,7 +118,7 @@ class Generator(nn.Module):
         self.module_names = get_module_names(self.model)
     def forward(self, x):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
-        if len(x.size() == 2):
+        if len(x.size()) == 2:
             x = x.view(x.size(0), x.size(1), 1, 1)
         return self.model(x)
 
@@ -166,7 +166,7 @@ class Discriminator(nn.Module):
     def grow_network(self):
         self.current_stage -= 1
         assert self.current_stage >= 1, 'Stage number cannot be smaller than 1!'
-        print('\ngrowing network...\n')
+        print('\ngrowing Discriminator...\n')
         # old block (used for fade in)
         old_block = nn.Sequential()
         old_from_rgb = deepcopy_layers(self.model, ['from_rgb'])
@@ -191,7 +191,7 @@ class Discriminator(nn.Module):
         self.module_names = get_module_names(self.model)
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
-        print('\nflushing network...\n')
+        print('\nflushing Discriminator...\n')
         new_block = deepcopy_layers(self.model.concat_block.layer2, 'new_block')
         new_from_rgb = deepcopy_layers(self.model.concat_block.layer2, 'new_from_rgb')
         # preserve the new block

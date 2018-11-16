@@ -11,11 +11,11 @@ class EqualizedConv2d(nn.Module):
         self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=True)
         nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
         nn.init.constant_(self.conv.bias, val=0.)
-        # conv_w = self.conv.weight.data.clone()
-        self.scale = self.conv.weight.data.pow(2.).mean().sqrt()
-        self.conv.weight.data.copy_(self.conv.weight.data / self.scale)
+        # self.scale = self.conv.weight.detach().pow(2.).mean().sqrt()
+        # self.conv.weight.copy_(self.conv.weight / self.scale)
     def forward(self, x):
-        return self.conv(x.mul(self.scale))
+        # return self.conv(x.mul(self.scale))
+        return self.conv(x)
 
 class EqualizedLinear(nn.Module):
     def __init__(self, in_features, out_features):
@@ -23,12 +23,12 @@ class EqualizedLinear(nn.Module):
         self.linear = nn.Linear(in_features, out_features)
         nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
         nn.init.constant_(self.linear.bias, val=0.)
-        # linear_w = self.linear.weight.data.clone()
-        self.scale = self.linear.weight.data.pow(2.).mean().sqrt()
-        self.linear.weight.data.copy_(self.linear.weight.data/self.scale)
+        # self.scale = self.linear.weight.detach().pow(2.).mean().sqrt()
+        # self.linear.weight.copy_(self.linear.weight / self.scale)
     def forward(self, x):
         N = x.size(0)
-        return self.linear(x.view(N,-1).mul(self.scale))
+        # return self.linear(x.view(N,-1).mul(self.scale))
+        return self.linear(x.view(N,-1))
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.
@@ -40,13 +40,13 @@ class MinibatchStddev(nn.Module):
         self.group_size = group_size
     def forward(self, x):
         G = min(self.group_size, x.size(0))
-        M = x.size(0) / G
+        M = int(x.size(0) / G)
         s = x.size()
         y = torch.reshape(x, (G, M, x.size(1), x.size(2), x.size(3)))     # [GMCHW] Split minibatch into M groups of size G.
         y = y - torch.mean(y, dim=0, keepdim=True)                        # [GMCHW] Subtract mean over group.
         y = torch.mean(y.pow(2.), dim=0, keepdim=False)                   # [MCHW]  Calc variance over group.
         y = torch.sqrt(y + 1e-8)                                          # [MCHW]  Calc stddev over group.
-        y = torch.mean(y.view(M,-1), dim=1, keepdims=False).view(M,1,1,1) # [M111]  Take average over fmaps and pixels.
+        y = torch.mean(y.view(M,-1), dim=1, keepdim=False).view(M,1,1,1) # [M111]  Take average over fmaps and pixels.
         y = y.repeat(G,1,x.size(2), x.size(3))                            # [N1HW]  Replicate over group and pixels.
         return torch.cat([x, y], 1)                                       # [NCHW]  Append as new fmap.
 

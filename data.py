@@ -106,7 +106,7 @@ class ISIC2017_GAN(udata.Dataset):
     def __len__(self):
         return len(self.files)
     def  __getitem__(self, idx):
-        image = Image.open(self.files[idx])
+        image = Image.open(self.files[idx][0])
         # center crop
         width, height = image.size
         new_size = min(width, height)
