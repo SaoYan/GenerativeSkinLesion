@@ -14,6 +14,13 @@ def conv_block(layers, in_features, out_features, kernel_size, stride, padding, 
         layers.append(PixelwiseNorm())
     return layers
 
+def deconv_block(layers, in_features, out_features, kernel_size, stride, padding, pixel_norm):
+    layers.append(EqualizedDeconv2d(in_features, out_features, kernel_size, stride, padding))
+    layers.append(nn.LeakyReLU(0.2))
+    if pixel_norm:
+        layers.append(PixelwiseNorm())
+    return layers
+
 def deepcopy_layers(module, layer_name):
     # copy the layer with name in "layer_name"
     new_module = nn.Sequential()
@@ -66,7 +73,7 @@ class Generator(nn.Module):
         layers = []
         ndim = self.nf(self.current_stage)
         layers.append(PixelwiseNorm()) # normalize latent vectors before feeding them to the network
-        layers = conv_block(layers, in_features=self.nz, out_features=ndim, kernel_size=4, stride=1, padding=3, pixel_norm=True)
+        layers = deconv_block(layers, in_features=self.nz, out_features=ndim, kernel_size=4, stride=1, padding=0, pixel_norm=True)
         layers = conv_block(layers, in_features=ndim, out_features=ndim, kernel_size=3, stride=1, padding=1, pixel_norm=True)
         return  nn.Sequential(*layers)
     def to_rgb_block(self, ndim):

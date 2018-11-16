@@ -4,31 +4,56 @@ import torch.nn.functional as F
 
 #----------------------------------------------------------------------------
 # Equalized learning rate.
+# reference: https://github.com/akanimax/pro_gan_pytorch/blob/master/pro_gan_pytorch/CustomLayers.py
 
 class EqualizedConv2d(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size, stride, padding):
+    def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
         super(EqualizedConv2d, self).__init__()
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=True)
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=bias)
         nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
-        nn.init.constant_(self.conv.bias, val=0.)
-        # self.scale = self.conv.weight.detach().pow(2.).mean().sqrt()
-        # self.conv.weight.copy_(self.conv.weight / self.scale)
+        if bias:
+            nn.init.constant_(self.conv.bias, val=0.)
+        self.scale = self.conv.weight.data.pow(2.).mean().sqrt()
+        self.conv.weight.data.copy_(self.conv.weight.data / self.scale)
     def forward(self, x):
-        # return self.conv(x.mul(self.scale))
-        return self.conv(x)
+        try:
+            dev_scale = self.scale.to(x.get_device())
+        except RuntimeError:
+            dev_scale = self.scale
+        return self.conv(x.mul(dev_scale))
+
+class EqualizedDeconv2d(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
+        super(EqualizedDeconv2d, self).__init__()
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias=bias)
+        nn.init.kaiming_normal_(self.deconv.weight, a=nn.init.calculate_gain('conv2d'))
+        if bias:
+            nn.init.constant_(self.deconv.bias, val=0.)
+        self.scale = self.deconv.weight.data.pow(2.).mean().sqrt()
+        self.deconv.weight.data.copy_(self.deconv.weight.data / self.scale)
+    def forward(self, x):
+        try:
+            dev_scale = self.scale.to(x.get_device())
+        except RuntimeError:
+            dev_scale = self.scale
+        return self.deconv(x.mul(dev_scale))
 
 class EqualizedLinear(nn.Module):
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, bias=True):
         super(EqualizedLinear, self).__init__()
-        self.linear = nn.Linear(in_features, out_features)
+        self.linear = nn.Linear(in_features, out_features, bias=bias)
         nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
-        nn.init.constant_(self.linear.bias, val=0.)
-        # self.scale = self.linear.weight.detach().pow(2.).mean().sqrt()
-        # self.linear.weight.copy_(self.linear.weight / self.scale)
+        if bias:
+            nn.init.constant_(self.linear.bias, val=0.)
+        self.scale = self.linear.weight.data.pow(2.).mean().sqrt()
+        self.linear.weight.data.copy_(self.linear.weight.data / self.scale)
     def forward(self, x):
+        try:
+            dev_scale = self.scale.to(x.get_device())
+        except RuntimeError:
+            dev_scale = self.scale
         N = x.size(0)
-        # return self.linear(x.view(N,-1).mul(self.scale))
-        return self.linear(x.view(N,-1))
+        return self.linear(x.view(N,-1).mul(dev_scale))
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.
