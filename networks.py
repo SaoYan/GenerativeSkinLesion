@@ -64,7 +64,7 @@ class Generator(nn.Module):
         return model
     def first_block(self):
         layers = []
-        ndim = self.nf(1)
+        ndim = self.nf(self.current_stage)
         layers.append(PixelwiseNorm()) # normalize latent vectors before feeding them to the network
         layers = conv_block(layers, in_features=self.nz, out_features=ndim, kernel_size=4, stride=1, padding=3, pixel_norm=True)
         layers = conv_block(layers, in_features=ndim, out_features=ndim, kernel_size=3, stride=1, padding=1, pixel_norm=True)

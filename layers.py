@@ -76,9 +76,11 @@ class Fadein(nn.Module):
     def __init__(self, alpha=0.):
         super(Fadein, self).__init__()
         self.alpha = alpha
-    def set_alpha(self, delta):
+    def update_alpha(self, delta):
         self.alpha = self.alpha + delta
         self.alpha = max(0, min(self.alpha, 1.0))
+    def get_alpha(self):
+        return self.alpha
     def forward(self, x):
         # x is a ConcatTable, with x[0] being old layer, x[1] being the new layer to be faded in
         return x[0].mul(1.0-self.alpha) + x[1].mul(self.alpha)
