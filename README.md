@@ -1,6 +1,12 @@
 # GenerativeSkinLesion
 Using GANs to augmentation skin lesion dataset
 
+## Dependences  
+* PyTorch (>=0.4.1) with torchvision  
+* [tensorboardX](https://github.com/lanpa/tensorboardX)  
+* [Pillow](https://github.com/python-pillow/Pillow)  
+*
+
 ## Data  
 [Google Drive Link](https://drive.google.com/drive/folders/1lndmIp75e1uo2cmsdV15yYDMhWRXeCUc?usp=sharing)  
 
