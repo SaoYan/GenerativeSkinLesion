@@ -61,7 +61,7 @@ class trainer:
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
         ])
-        self.dataset = ISIC2017_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
+        self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
     def update_trainer(self, stage, inter_epoch):
         if stage == 1:
@@ -72,15 +72,16 @@ class trainer:
             assert stage <= total_stages, 'Invalid stage number!'
             assert inter_epoch < opt.unit_epoch*2, 'Invalid epoch number!'
             # grow networks
-            delta = 1. / (opt.unit_epoch)
+            delta = 1. / (opt.unit_epoch-1)
             if inter_epoch == 0:
                 self.current_size *= 2
                 self.G.module.grow_network()
                 self.D.module.grow_network()
             # fade in (# epochs: unit_epoch)
             if inter_epoch < opt.unit_epoch:
-                self.G.module.model.fadein.update_alpha(delta)
-                self.D.module.model.fadein.update_alpha(delta)
+                if inter_epoch > 0:
+                    self.G.module.model.fadein.update_alpha(delta)
+                    self.D.module.model.fadein.update_alpha(delta)
             # stablization (# epochs: unit_epoch)
             elif inter_epoch < opt.unit_epoch*2:
                 if inter_epoch == opt.unit_epoch:
