@@ -66,7 +66,8 @@ class trainer:
     def update_trainer(self, stage, inter_epoch):
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
-            current_alpha = 0
+            G_alpha = 0
+            D_alpha = 0
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
@@ -77,23 +78,30 @@ class trainer:
                 self.current_size *= 2
                 self.G.module.grow_network()
                 self.D.module.grow_network()
-            # fade in (# epochs: unit_epoch)
+            # fade in G (# epochs: unit_epoch)
             if inter_epoch < opt.unit_epoch:
                 self.G.module.model.fadein.update_alpha(delta)
-                self.D.module.model.fadein.update_alpha(delta)
-            # stablization (# epochs: unit_epoch)
+            # fade in D (# epochs: unit_epoch)
             elif inter_epoch < opt.unit_epoch*2:
                 if inter_epoch == opt.unit_epoch:
                     self.G.module.flush_network()
+                self.D.module.model.fadein.update_alpha(delta)
+            # stablization (# epochs: unit_epoch)
+            elif inter_epoch < opt.unit_epoch*3:
+                if inter_epoch == opt.unit_epoch*2:
                     self.D.module.flush_network()
             # archive alpha
             try:
-                current_alpha = self.G.module.model.fadein.get_alpha()
+                G_alpha = self.G.module.model.fadein.get_alpha()
             except:
-                current_alpha = 1
+                G_alpha = 1
+            try:
+                D_alpha = self.D.module.model.fadein.get_alpha()
+            except:
+                D_alpha = 1
         self.G.to(device)
         self.D.to(device)
-        return current_alpha
+        return [G_alpha, D_alpha]
     def update_network(self, real_data):
         # switch to training mode
         self.G.train(); self.D.train()
@@ -151,17 +159,16 @@ class trainer:
         disp_img = []
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
-            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 2
+            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 3
             for epoch in range(M):
-                current_alpha = self.update_trainer(stage, epoch)
-                self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
+                G_alpha, D_alpha = self.update_trainer(stage, epoch)
+                self.writer.add_scalar('archive/G_alpha', G_alpha, global_epoch)
+                self.writer.add_scalar('archive/D_alpha', D_alpha, global_epoch)
                 disp_img.clear()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
                         real_data = data
-                        real_data_current = F.interpolate(real_data, size=self.current_size, mode='nearest')
-                        real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
-                        real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
+                        real_data = F.interpolate(real_data, size=self.current_size, mode='nearest')
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
                         if epoch % 10 == 9 and aug == 0 and i == 0:
                             disp_img.append(real_data) # archive for logging image
