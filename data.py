@@ -51,7 +51,7 @@ def preprocess_data_classify(root_dir):
         for filename in sk:
             writer.writerow([filename] + ['0'])
 
-class ISIC2017(udata.Dataset):
+class ISIC(udata.Dataset):
     def __init__(self, csv_file, shuffle=True, rotate=True, transform=None):
         file = open(csv_file, newline='')
         reader = csv.reader(file, delimiter=',')
@@ -94,7 +94,7 @@ def preprocess_data_gan(root_dir):
         for filename in melanoma:
             writer.writerow([filename])
 
-class ISIC2017_GAN(udata.Dataset):
+class ISIC_GAN(udata.Dataset):
     def __init__(self, csv_file, shuffle=True, rotate=True, transform=None):
         file = open(csv_file, newline='')
         reader = csv.reader(file, delimiter=',')

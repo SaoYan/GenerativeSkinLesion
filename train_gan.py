@@ -11,7 +11,7 @@ import torch.autograd as autograd
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
-from data import preprocess_data_gan,  ISIC2017_GAN
+from data import preprocess_data_gan,  ISIC_GAN
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
