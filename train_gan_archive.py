@@ -178,7 +178,7 @@ class trainer:
                             self.writer.add_scalar('train/G_loss', G_loss, global_step)
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
                             self.writer.add_scalar('train/Wasserstein_Dist', Wasserstein_Dist, global_step)
-                            print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {} D_loss {} W_Dist {}" \
+                            print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
                                 .format(stage, total_stages, epoch+1, M, aug+1, opt.num_aug, i+1, len(self.dataloader), G_loss, D_loss, Wasserstein_Dist))
                         global_step += 1
                 global_epoch += 1
