@@ -28,7 +28,7 @@ parser.add_argument("--nz", type=int, default=512, help="dimension of the input 
 parser.add_argument("--size", type=int, default=256, help="the final size of the generated image")
 
 parser.add_argument("--batch_size", type=int, default=16)
-parser.add_argument("--unit_epoch", type=int, default=30)
+parser.add_argument("--unit_epoch", type=int, default=50)
 parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
 parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
@@ -57,6 +57,7 @@ class trainer:
         self.transform = transforms.Compose([
             transforms.Resize((300,300)),
             transforms.RandomCrop((opt.size,opt.size)),
+            transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -71,10 +72,22 @@ class trainer:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             assert inter_epoch < opt.unit_epoch*2, 'Invalid epoch number!'
+            # adjust dataloder (new current_size)
+            if inter_epoch == 0:
+                self.current_size *= 2
+                self.transform = transforms.Compose([
+                    transforms.Resize((300,300)),
+                    transforms.RandomCrop((opt.size,opt.size)),
+                    transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
+                    transforms.RandomVerticalFlip(),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                ])
+                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
+                self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
             # grow networks
             delta = 1. / (opt.unit_epoch-1)
             if inter_epoch == 0:
-                self.current_size *= 2
                 self.G.module.grow_network()
                 self.D.module.grow_network()
             # fade in (# epochs: unit_epoch)
@@ -160,13 +173,12 @@ class trainer:
                 disp_img.clear()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
-                        real_data = data
+                        real_data_current = data
                         if stage > 1:
-                            real_data_current = F.interpolate(real_data, size=self.current_size, mode='nearest')
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
                         else:
-                            real_data = F.interpolate(real_data, size=self.current_size, mode='nearest')
+                            real_data = real_data_current
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
                         if epoch % disp_circle == disp_circle-1 and aug == 0 and i == 0: # only archive image when necessary, don't waste memory
                             disp_img.append(real_data) # archive for logging image
