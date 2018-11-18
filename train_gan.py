@@ -57,9 +57,9 @@ class trainer:
         self.transform = transforms.Compose([
             transforms.Resize((300,300)),
             transforms.RandomCrop((opt.size,opt.size)),
-            transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
+            transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.ToTensor(),
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
@@ -78,9 +78,9 @@ class trainer:
                 self.transform = transforms.Compose([
                     transforms.Resize((300,300)),
                     transforms.RandomCrop((opt.size,opt.size)),
-                    transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.RandomVerticalFlip(),
                     transforms.RandomHorizontalFlip(),
+                    transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.ToTensor(),
                 ])
                 self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
