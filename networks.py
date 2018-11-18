@@ -95,8 +95,8 @@ class Generator(nn.Module):
         # old block (used for fade in)
         old_block = nn.Sequential()
         old_to_rgb = deepcopy_layers(self.model, ['to_rgb'])
-        old_block.add_module('old_upsample', Upsample())
         old_block.add_module('old_to_rgb', old_to_rgb[-1])
+        old_block.add_module('old_upsample', Upsample())
         # new block to be faded in
         new_block = nn.Sequential()
         inter_block = self.intermediate_block(self.current_stage)
