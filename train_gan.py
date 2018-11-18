@@ -190,6 +190,8 @@ class trainer:
                         fake_data = self.G.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
+            torch.save(self.G.state_dict(), os.path.join(opt.outf, 'netG_stage{}.pth'.format(stage)))
+            torch.save(self.D.state_dict(), os.path.join(opt.outf, 'netD_stage{}.pth'.format(stage)))
 
 #----------------------------------------------------------------------------
 # main function
