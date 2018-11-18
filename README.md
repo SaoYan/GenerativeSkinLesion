@@ -41,6 +41,6 @@ python train_gan.py --preprocess
 * --num_aug: maybe try 5 for data_2017 and 10 for data_2016, that is around 1000 images per "actual" epoch
 
 ## 更新日志
-* 11.17：参照Tensorflow源码，修正了两个细节  
-      * [Refer to this commit](https://github.com/SaoYan/GenerativeSkinLesion/commit/9747160c1424b8c5a45aed2fef856c7bf46aadc1?diff=unified) 训练某个分辨率的阶段，需要将256x256的图片下采样到相应的分辨率作为训练样本，之前代码中这个下采样采用了nearest neighboring，现在修正成了PIL.Image.ANTIALIAS（该参数参见[Pillow文档](https://pillow.readthedocs.io/en/3.0.0/reference/Image.html#PIL.Image.Image.resize)）
+* 11.17：参照Tensorflow源码，修正了两个细节    
+      * [Refer to this commit](https://github.com/SaoYan/GenerativeSkinLesion/commit/9747160c1424b8c5a45aed2fef856c7bf46aadc1?diff=unified) 训练某个分辨率的阶段，需要将256x256的图片下采样到相应的分辨率作为训练样本，之前代码中这个下采样采用了nearest neighboring，现在修正成了PIL.Image.ANTIALIAS（该参数参见[Pillow文档](https://pillow.readthedocs.io/en/3.0.0/reference/Image.html#PIL.Image.Image.resize)）    
       * [Refer to this commit](https://github.com/SaoYan/GenerativeSkinLesion/commit/d9ad43bb83ec800a539849ccd894545d086f2a16) 在G的fade in阶段，调换了old_to_rgb和old_upsample的顺序
