@@ -60,7 +60,7 @@ class trainer:
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
             transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
-            transforms.ToTensor(),
+            transforms.ToTensor()
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
@@ -82,7 +82,7 @@ class trainer:
                     transforms.RandomVerticalFlip(),
                     transforms.RandomHorizontalFlip(),
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
-                    transforms.ToTensor(),
+                    transforms.ToTensor()
                 ])
                 self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
