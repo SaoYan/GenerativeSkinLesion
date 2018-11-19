@@ -38,6 +38,12 @@ opt = parser.parse_args()
 #----------------------------------------------------------------------------
 # Trainer
 
+def __worker_init_fn__():
+    torch_seed = torch.initial_seed()
+    np_seed = torch_seed // 2**32-1
+    random.seed(torch_seed)
+    np.random.seed(np_seed)
+
 class trainer:
     def __init__(self):
         self.current_size = 4
@@ -63,7 +69,8 @@ class trainer:
             transforms.ToTensor()
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
-        self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
+        self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
+            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__)
     def update_trainer(self, stage, inter_epoch):
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
@@ -85,7 +92,8 @@ class trainer:
                     transforms.ToTensor()
                 ])
                 self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
-                self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
+                self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
+                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__)
             # grow networks
             delta = 1. / (opt.unit_epoch-1)
             if inter_epoch == 0:
