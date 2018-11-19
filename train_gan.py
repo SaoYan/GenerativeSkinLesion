@@ -78,7 +78,7 @@ class trainer:
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__)
+            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
     def update_trainer(self, stage, inter_epoch):
         """
         update status of trainer
@@ -107,7 +107,7 @@ class trainer:
                 ])
                 self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__)
+                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
             # grow networks
             delta = 1. / (opt.unit_epoch-1)
             if inter_epoch == 0:
@@ -147,7 +147,7 @@ class trainer:
             for name, param_EMA in self.G_EMA.named_parameters():
                 param_G = param_dict_G[name]
                 assert (param_G is not param_EMA)
-                param_EMA.data.copy_(decay * param_EMA.data + (1. - decay) * param_G.detach())
+                param_EMA.data.copy_(decay * param_EMA.data + (1. - decay) * param_G.detach().cpu())
     def update_network(self, real_data):
         """
         perform one step of gradient descent
