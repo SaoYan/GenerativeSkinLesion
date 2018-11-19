@@ -2,18 +2,18 @@ import os
 import math
 import argparse
 import random
+import copy
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torchvision.transforms as transforms
-import torchvision.utils as utils
 import torch.autograd as autograd
+from torchvision import transforms, utils, datasets
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
-from data import preprocess_data_gan,  ISIC_GAN
+from data import preprocess_data_gan, ISIC_GAN
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
