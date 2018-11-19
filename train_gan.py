@@ -29,7 +29,7 @@ parser.add_argument("--size", type=int, default=256, help="the final size of the
 
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--unit_epoch", type=int, default=50)
-parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
+parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
 parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
@@ -40,9 +40,11 @@ opt = parser.parse_args()
 
 class trainer:
     def __init__(self):
+        print("\ninitializing trainer ...\n")
         self.current_size = 4
         self.writer = SummaryWriter(opt.outf)
         self.init_trainer()
+        print("\ndone\n")
     def init_trainer(self):
         # networks
         self.G = Generator(nc=opt.nc, nz=opt.nz, size=opt.size)
@@ -65,6 +67,7 @@ class trainer:
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, num_workers=8)
     def update_trainer(self, stage, inter_epoch):
+        print("\nupdating trainer ...\n")
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
             current_alpha = 0
@@ -107,6 +110,7 @@ class trainer:
                 current_alpha = 1
         self.G.to(device)
         self.D.to(device)
+        print("\ndone\n")
         return current_alpha
     def update_network(self, real_data):
         # switch to training mode
