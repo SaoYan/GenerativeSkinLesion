@@ -64,7 +64,7 @@ class EqualizedLinear(nn.Module):
         N = x.size(0)
         x = self.linear(x.view(N,-1).mul(dev_scale))
         if self.bias:
-            return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
+            return x + self.bias_param.view(1, -1).expand_as(x)
         return x
 
 #----------------------------------------------------------------------------
