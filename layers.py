@@ -122,14 +122,8 @@ class Fadein(nn.Module):
         return x[0].mul(1.0-self.alpha) + x[1].mul(self.alpha)
 
 #----------------------------------------------------------------------------
-class Flatten(nn.Module):
-    def __init__(self):
-        super(Flatten, self).__init__()
-    def forward(self, x):
-        return x.view(x.size(0), -1)
-
-#----------------------------------------------------------------------------
 # Nearest-neighbor upsample
+# define this myself because torch.nn.Upsample has been deprecated
 
 class Upsample(nn.Module):
     def __init__(self):

@@ -5,7 +5,6 @@ from layers import *
 
 #----------------------------------------------------------------------------
 # Auxiliary functions.
-# reference: https://github.com/nashory/pggan-pytorch/blob/master/network.py
 
 def conv_block(layers, in_features, out_features, kernel_size, stride, padding, pixel_norm):
     layers.append(EqualizedConv2d(in_features, out_features, kernel_size, stride, padding))
@@ -31,21 +30,13 @@ def deepcopy_layers(module, layer_name):
     return new_module
 
 def deepcopy_exclude(module, exclude_name):
-    # copy all the layers expect "layer_name"
+    # copy all the layers EXCEPT "layer_name"
     new_module = nn.Sequential()
     for name, m in module.named_children():
         if name not in exclude_name:
             new_module.add_module(name, m)                 # construct new structure
             new_module[-1].load_state_dict(m.state_dict()) # copy weights
     return new_module
-
-def get_module_names(model):
-    names = []
-    for key in model.state_dict().keys():
-        name = key.split('.')[0]
-        if not name in names:
-            names.append(name)
-    return names
 
 #----------------------------------------------------------------------------
 # Generator.
@@ -67,7 +58,6 @@ class Generator(nn.Module):
         model = nn.Sequential()
         model.add_module('stage_{}'.format(self.current_stage), self.first_block())
         model.add_module('to_rgb', self.to_rgb_block(self.nf(self.current_stage)))
-        self.module_names = get_module_names(model)
         return model
     def first_block(self):
         layers = []
@@ -107,7 +97,6 @@ class Generator(nn.Module):
         new_model.add_module('fadein', Fadein())
         self.model = None
         self.model = new_model
-        self.module_names = get_module_names(self.model)
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
         print('\nflushing Generator...\n')
@@ -122,7 +111,6 @@ class Generator(nn.Module):
         new_model.add_module('to_rgb', new_to_rgb[-1])
         self.model = None
         self.model = new_model
-        self.module_names = get_module_names(self.model)
     def forward(self, x):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
         if len(x.size()) == 2:
@@ -148,7 +136,6 @@ class Discriminator(nn.Module):
         model = nn.Sequential()
         model.add_module('from_rgb', self.from_rgb_block(self.nf(8-self.current_stage)))
         model.add_module('stage_{}'.format(self.current_stage), self.last_block())
-        self.module_names = get_module_names(model)
         return model
     def last_block(self):
         layers = []
@@ -195,7 +182,6 @@ class Discriminator(nn.Module):
                 new_model[-1].load_state_dict(module.state_dict())
         self.model = None
         self.model = new_model
-        self.module_names = get_module_names(self.model)
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
         print('\nflushing Discriminator...\n')
@@ -213,7 +199,6 @@ class Discriminator(nn.Module):
                 new_model[-1].load_state_dict(module.state_dict())
         self.model = None
         self.model = new_model
-        self.module_names = get_module_names(self.model)
     def forward(self, x):
         assert len(x.size()) == 4, 'Invalid input size!'
         return self.model(x)
