@@ -113,16 +113,19 @@ class trainer:
             if inter_epoch == 0:
                 self.G.module.grow_network()
                 self.D.module.grow_network()
+                self.G_EMA.grow_network()
             # fade in (# epochs: unit_epoch)
             if inter_epoch < opt.unit_epoch:
                 if inter_epoch > 0:
                     self.G.module.model.fadein.update_alpha(delta)
                     self.D.module.model.fadein.update_alpha(delta)
+                    self.G_EMA.update_alpha(delta)
             # stablization (# epochs: unit_epoch)
             elif inter_epoch < opt.unit_epoch*2:
                 if inter_epoch == opt.unit_epoch:
                     self.G.module.flush_network()
                     self.D.module.flush_network()
+                    self.G_EMA.flush_network()
             # archive alpha
             try:
                 current_alpha = self.G.module.model.fadein.get_alpha()
@@ -130,15 +133,21 @@ class trainer:
                 current_alpha = 1
         self.G.to(device)
         self.D.to(device)
+        self.G_EMA.to('cpu')
         print("\ndone\n")
         return current_alpha
-    def moving_average(self, decay=0.999):
+    def update_moving_average(self, decay=0.999):
         """
-        compute exponential running average for the weights of the generator
+        update exponential running average (EMA) for the weights of the generator
         :param decay: the EMA is computed as W_EMA_t = decay * W_EMA_{t-1} + (1-decay) * W_G
         :return : None
         """
-        
+        with torch.no_grad():
+            param_dict_G = dict(self.G.module.named_parameters())
+            for name, param_EMA in self.G_EMA.named_parameters():
+                param_G = param_dict_G[name]
+                assert (param_G is not param_EMA)
+                param_EMA.data.copy_(decay * param_EMA.data + (1. - decay) * param_G.detach())
     def update_network(self, real_data):
         """
         perform one step of gradient descent
@@ -220,6 +229,7 @@ class trainer:
                             disp_img.append(real_data) # archive for logging image
                         real_data =  real_data.to(device)
                         G_loss, D_loss, Wasserstein_Dist = self.update_network(real_data)
+                        self.update_moving_average()
                         if i % 10 == 0:
                             self.writer.add_scalar('train/G_loss', G_loss, global_step)
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
@@ -233,9 +243,9 @@ class trainer:
                     I_real = utils.make_grid(disp_img[0], nrow=4, normalize=True, scale_each=True)
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
-                        self.G.eval()
-                        z = torch.FloatTensor(disp_img[0].size(0), opt.nz).normal_(0.0, 1.0).to(device)
-                        fake_data = self.G.forward(z)
+                        self.G_EMA.eval()
+                        z = torch.FloatTensor(disp_img[0].size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
+                        fake_data = self.G_EMA.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
             torch.save(self.G.state_dict(), os.path.join(opt.outf, 'netG_stage{}.pth'.format(stage)))
