@@ -57,9 +57,13 @@ class trainer:
         # networks
         self.G = Generator(nc=opt.nc, nz=opt.nz, size=opt.size)
         self.D = Discriminator(nc=opt.nc, size=opt.size)
+        self.G_EMA = copy.deepcopy(self.G)
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=device_ids).to(device)
         self.D = nn.DataParallel(self.D, device_ids=device_ids).to(device)
+        self.G_EMA = self.G_EMA.to('cpu') # keep this model on CPU to save GPU memory
+        for param in self.G_EMA.parameters():
+            param.requires_grad_(False) # turn off grad because G_EMA will only be used for inference
         # optimizers
         self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
@@ -76,6 +80,12 @@ class trainer:
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__)
     def update_trainer(self, stage, inter_epoch):
+        """
+        update status of trainer
+        :param stage: stage number; starting from 1
+        :param inter_epoch: epoch number within the current stage; starting from 0 within each stage
+        :return current_alpha: value of alpha (parameter for fade in) after updating trainer
+        """
         print("\nupdating trainer ...\n")
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
@@ -122,7 +132,19 @@ class trainer:
         self.D.to(device)
         print("\ndone\n")
         return current_alpha
+    def moving_average(self, decay=0.999):
+        """
+        compute exponential running average for the weights of the generator
+        :param decay: the EMA is computed as W_EMA_t = decay * W_EMA_{t-1} + (1-decay) * W_G
+        :return : None
+        """
+        
     def update_network(self, real_data):
+        """
+        perform one step of gradient descent
+        :param real_data: batch of real image; the dynamic range must has been adjusted to [-1,1]
+        :return [G_loss, D_loss, Wasserstein_Dist]
+        """
         # switch to training mode
         self.G.train(); self.D.train()
         ##########
