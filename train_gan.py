@@ -119,7 +119,7 @@ class trainer:
                 if inter_epoch > 0:
                     self.G.module.model.fadein.update_alpha(delta)
                     self.D.module.model.fadein.update_alpha(delta)
-                    self.G_EMA.update_alpha(delta)
+                    self.G_EMA.model.fadein.update_alpha(delta)
             # stablization (# epochs: unit_epoch)
             elif inter_epoch < opt.unit_epoch*2:
                 if inter_epoch == opt.unit_epoch:
