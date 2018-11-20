@@ -100,8 +100,8 @@ class Generator(nn.Module):
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
         print('\nflushing Generator...\n')
-        new_block = deepcopy_layers(self.model.concat_block.layer2, 'new_block')
-        new_to_rgb = deepcopy_layers(self.model.concat_block.layer2, 'new_to_rgb')
+        new_block = deepcopy_layers(self.model.concat_block.layer2, ['new_block'])
+        new_to_rgb = deepcopy_layers(self.model.concat_block.layer2, ['new_to_rgb'])
         # copy the previous trained layers (before ConcatTable and Fadein)
         new_model = nn.Sequential()
         new_model = deepcopy_exclude(self.model, ['concat_block', 'fadein'])
@@ -185,8 +185,8 @@ class Discriminator(nn.Module):
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
         print('\nflushing Discriminator...\n')
-        new_block = deepcopy_layers(self.model.concat_block.layer2, 'new_block')
-        new_from_rgb = deepcopy_layers(self.model.concat_block.layer2, 'new_from_rgb')
+        new_block = deepcopy_layers(self.model.concat_block.layer2, ['new_block'])
+        new_from_rgb = deepcopy_layers(self.model.concat_block.layer2, ['new_from_rgb'])
         # preserve the new block
         new_model = nn.Sequential()
         layer_name = 'stage_{}'.format(self.current_stage)
