@@ -95,7 +95,8 @@ class Generator(nn.Module):
         # add fade in layer
         new_model.add_module('concat_block', ConcatTable(old_block, new_block))
         new_model.add_module('fadein', Fadein())
-        self.model = None
+        del self.model
+        # self.model = None
         self.model = new_model
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
@@ -109,7 +110,8 @@ class Generator(nn.Module):
         layer_name = 'stage_{}'.format(self.current_stage)
         new_model.add_module(layer_name, new_block[-1])
         new_model.add_module('to_rgb', new_to_rgb[-1])
-        self.model = None
+        del self.model
+        # self.model = None
         self.model = new_model
     def forward(self, x):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
@@ -180,7 +182,8 @@ class Discriminator(nn.Module):
             if name != 'from_rgb':
                 new_model.add_module(name, module)
                 new_model[-1].load_state_dict(module.state_dict())
-        self.model = None
+        del self.model
+        # self.model = None
         self.model = new_model
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
@@ -197,7 +200,8 @@ class Discriminator(nn.Module):
             if name != 'concat_block' and name != 'fadein':
                 new_model.add_module(name, module)
                 new_model[-1].load_state_dict(module.state_dict())
-        self.model = None
+        del self.model
+        # self.model = None
         self.model = new_model
     def forward(self, x):
         assert len(x.size()) == 4, 'Invalid input size!'

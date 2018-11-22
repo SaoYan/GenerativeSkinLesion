@@ -188,6 +188,7 @@ class trainer:
                 self.writer.add_scalar('archive/G_alpha', G_alpha, global_epoch)
                 self.writer.add_scalar('archive/D_alpha', D_alpha, global_epoch)
                 disp_img.clear()
+                torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
                         real_data = data

@@ -216,6 +216,7 @@ class trainer:
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
                 disp_img.clear()
+                torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
                         real_data_current = data
