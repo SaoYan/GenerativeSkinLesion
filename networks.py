@@ -51,7 +51,7 @@ class Generator(nn.Module):
         self.size = size # the final size of the generated image
         self.stages = int(math.log2(self.size/4)) + 1 # the total number of stages (7 when size=256)
         self.current_stage = 1
-        self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), 512) # the number of channels in a particular stage
+        self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), self.nz) # the number of channels in a particular stage
         self.module_names = []
         self.model = self.get_init_G()
     def get_init_G(self):
@@ -131,7 +131,7 @@ class Discriminator(nn.Module):
         self.size = size # the size of the input image
         self.stages = int(math.log2(self.size/4)) + 1 # the total number of stages (7 when size=256)
         self.current_stage = self.stages
-        self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), 512) # the number of channels in a particular stage
+        self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), self.nz) # the number of channels in a particular stage
         self.module_names = []
         self.model = self.get_init_D()
     def get_init_D(self):
