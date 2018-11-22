@@ -241,8 +241,15 @@ class trainer:
                         fake_data = self.G_EMA.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=8, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
-            torch.save(self.G.state_dict(), os.path.join(opt.outf, 'netG_stage{}.pth'.format(stage)))
-            torch.save(self.D.state_dict(), os.path.join(opt.outf, 'netD_stage{}.pth'.format(stage)))
+            # after each stage: save checkpoints
+            checkpoint = {
+                'G_state_dict': self.G.module.state_dict(),
+                'D_state_dict': self.D.module.state_dict(),
+                'opt_G_state_dict': self.opt_G.state_dict(),
+                'opt_D_state_dict': self.opt_D.state_dict(),
+                'stage', stage
+            }
+            torch.save(checkpoint, os.path.join(opt.outf,'stage{}.pth'.format(stage)))
 
 #----------------------------------------------------------------------------
 # main function
