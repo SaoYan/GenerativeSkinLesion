@@ -128,6 +128,11 @@ class trainer:
         self.D.to(device)
         return [G_alpha, D_alpha]
     def update_network(self, real_data):
+        """
+        perform one step of gradient descent
+        :param real_data: batch of real image; the dynamic range must has been adjusted to [-1,1]
+        :return [G_loss, D_loss, Wasserstein_Dist]
+        """
         # switch to training mode
         self.G.train(); self.D.train()
         ##########
@@ -138,21 +143,19 @@ class trainer:
         self.opt_D.zero_grad()
         # D loss - real data
         pred_real = self.D.forward(real_data)
-        loss_real = pred_real.mean().mul(-1)
-        loss_real_drift = loss_real + 0.001 * pred_real.pow(2.).mean()
-        loss_real_drift.backward()
+        loss_real = pred_real.mean()
+        loss_real_drift = 0.001 * pred_real.pow(2.).mean()
         # D loss - fake data
         z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to(device)
         fake_data = self.G.forward(z)
         pred_fake = self.D.forward(fake_data.detach())
         loss_fake = pred_fake.mean()
-        loss_fake.backward()
         # D loss - gradient penalty
         gp = self.gradient_penalty(real_data, fake_data)
-        gp.backward()
         # update D
-        D_loss = loss_real_drift.item() + loss_fake.item() + gp.item()
-        Wasserstein_Dist = - (loss_real.item() + loss_fake.item())
+        D_loss = loss_fake - loss_real + loss_real_drift + gp
+        Wasserstein_Dist = loss_fake.item() - loss_real.item()
+        D_loss.backward()
         self.opt_D.step()
         ##########
         ## Train Generator
@@ -164,21 +167,21 @@ class trainer:
         z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to(device)
         fake_data = self.G.forward(z)
         pred_fake = self.D.forward(fake_data)
-        loss_fake = pred_fake.mean().mul(-1)
-        loss_fake.backward()
-        G_loss = loss_fake.item()
+        G_loss = pred_fake.mean().mul(-1.)
+        G_loss.backward()
         self.opt_G.step()
-        return [G_loss, D_loss, Wasserstein_Dist]
+        return [G_loss.item(), D_loss.item(), Wasserstein_Dist]
     def gradient_penalty(self, real_data, fake_data):
         LAMBDA = 10.
         alpha = torch.rand(real_data.size(0),1,1,1).to(device)
-        interpolates = alpha * real_data + (1 - alpha) * fake_data
+        interpolates = alpha * real_data.detach() + (1 - alpha) * fake_data.detach()
         interpolates.requires_grad_(True)
         disc_interpolates = self.D.forward(interpolates)
         gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
             grad_outputs=torch.ones_like(disc_interpolates).to(device), create_graph=True, retain_graph=True, only_inputs=True)[0]
-        gradient_penalty = gradients.norm(2, dim=1).sub(1.).pow(2.).mean()
-        return gradient_penalty * LAMBDA
+        gradients = gradients.view(gradients.size(0), -1)
+        gradient_penalty = LAMBDA * gradients.norm(2, dim=1).sub(1.).pow(2.).mean()
+        return gradient_penalty
     def train(self):
         global_step = 0
         global_epoch = 0
