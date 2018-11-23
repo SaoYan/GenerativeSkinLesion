@@ -164,8 +164,9 @@ class trainer:
         self.opt_D.zero_grad()
         # D loss - real data
         pred_real = self.D.forward(real_data)
-        loss_real = pred_real.mean().mul(-1) + 0.001 * pred_real.pow(2.).mean()
-        loss_real.backward()
+        loss_real = pred_real.mean().mul(-1)
+        loss_real_drift = loss_real + 0.001 * pred_real.pow(2.).mean()
+        loss_real_drift.backward()
         # D loss - fake data
         z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to(device)
         fake_data = self.G.forward(z)
@@ -176,7 +177,7 @@ class trainer:
         gp = self.gradient_penalty(real_data, fake_data)
         gp.backward()
         # update D
-        D_loss = loss_real.item() + loss_fake.item() + gp.item()
+        D_loss = loss_real_drift.item() + loss_fake.item() + gp.item()
         Wasserstein_Dist = - (loss_real.item() + loss_fake.item())
         self.opt_D.step()
         ##########
