@@ -68,6 +68,10 @@ class Generator(nn.Module):
         return  nn.Sequential(*layers)
     def to_rgb_block(self, ndim):
         return EqualizedConv2d(in_features=ndim, out_features=self.nc, kernel_size=1, stride=1, padding=0)
+        # layers = []
+        # layers.append(EqualizedConv2d(in_features=ndim, out_features=self.nc, kernel_size=1, stride=1, padding=0))
+        # layers.append(nn.Tanh())
+        # return  nn.Sequential(*layers)
     def intermediate_block(self, stage):
         assert stage > 1, 'For intermediate blocks, stage should be larger than 1!'
         assert stage <= self.stages, 'Exceeding the maximum stage number!'
@@ -125,9 +129,10 @@ class Generator(nn.Module):
 # reference 2: https://github.com/nashory/pggan-pytorch/blob/master/network.py#L191
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=3, size=256):
+    def __init__(self, nc=3, nz=512, size=256):
         super(Discriminator, self).__init__()
         self.nc = nc # number of channels of the input
+        self.nz = nz # dimension of G's input noise
         self.size = size # the size of the input image
         self.stages = int(math.log2(self.size/4)) + 1 # the total number of stages (7 when size=256)
         self.current_stage = self.stages

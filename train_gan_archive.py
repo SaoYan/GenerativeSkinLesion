@@ -16,6 +16,8 @@ from data import preprocess_data_gan,  ISIC_GAN
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
+torch.backends.cudnn.benchmark = True
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device_ids = [0,1]
 
@@ -52,7 +54,7 @@ class trainer:
     def init_trainer(self):
         # networks
         self.G = Generator(nc=opt.nc, nz=opt.nz, size=opt.size)
-        self.D = Discriminator(nc=opt.nc, size=opt.size)
+        self.D = Discriminator(nc=opt.nc, nz=opt.nz, size=opt.size)
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=device_ids).to(device)
         self.D = nn.DataParallel(self.D, device_ids=device_ids).to(device)
@@ -222,7 +224,7 @@ class trainer:
                 'D_state_dict': self.D.module.state_dict(),
                 'opt_G_state_dict': self.opt_G.state_dict(),
                 'opt_D_state_dict': self.opt_D.state_dict(),
-                'stage', stage
+                'stage': stage
             }
             torch.save(checkpoint, os.path.join(opt.outf,'stage{}.pth'.format(stage)))
 
