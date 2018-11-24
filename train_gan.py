@@ -100,34 +100,33 @@ class trainer:
             if inter_epoch == 0:
                 self.current_size *= 2
                 self.transform = transforms.Compose([
-                    transforms.Resize((300,300)),
-                    transforms.RandomCrop((opt.size,opt.size)),
-                    transforms.RandomVerticalFlip(),
-                    transforms.RandomHorizontalFlip(),
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.ToTensor()
                 ])
-                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
+                self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+
+            delta = 1. / (opt.unit_epoch-1.)
             # grow networks
-            delta = 1. / (opt.unit_epoch-1)
             if inter_epoch == 0:
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
-            # fade in (# epochs: unit_epoch)
-            if inter_epoch < opt.unit_epoch:
-                if inter_epoch > 0:
-                    self.G.module.model.fadein.update_alpha(delta)
-                    self.D.module.model.fadein.update_alpha(delta)
-                    self.G_EMA.model.fadein.update_alpha(delta)
-            # stablization (# epochs: unit_epoch)
-            elif inter_epoch < opt.unit_epoch*2:
-                if inter_epoch == opt.unit_epoch:
-                    self.G.module.flush_network()
-                    self.D.module.flush_network()
-                    self.G_EMA.flush_network()
+            # fade in
+            elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
+                self.G.module.model.fadein.update_alpha(delta)
+                self.D.module.model.fadein.update_alpha(delta)
+                self.G_EMA.model.fadein.update_alpha(delta)
+            # flush networks
+            elif inter_epoch == opt.unit_epoch:
+                self.G.module.flush_network()
+                self.D.module.flush_network()
+                self.G_EMA.flush_network()
+            # stablization
+            else:
+                print("\nnothing to update about trainer ...\n")
+
             # archive alpha
             try:
                 current_alpha = self.G.module.model.fadein.get_alpha()
