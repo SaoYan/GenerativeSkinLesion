@@ -100,7 +100,7 @@ class trainer:
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.ToTensor()
                 ])
-                self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
+                self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=False, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
 
