@@ -77,7 +77,8 @@ class trainer:
         self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
-    def update_trainer(self, stage, inter_epoch):
+        self.len = len(self.dataloader)
+    def update_trainer(self, stage, inter_step):
         """
         update status of trainer
         :param stage: stage number; starting from 1
@@ -86,14 +87,14 @@ class trainer:
         """
         print("\nupdating trainer ...\n")
         if stage == 1:
-            assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
+            assert inter_step < opt.unit_epoch * self.len, 'Invalid epoch number!'
             current_alpha = 0
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
-            assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
+            assert inter_step < opt.unit_epoch * 2 * opt.num_aug * self.len, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
-            if inter_epoch == 0:
+            if inter_step == 0:
                 self.current_size *= 2
                 self.transform = transforms.Compose([
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
@@ -103,19 +104,19 @@ class trainer:
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
 
-            delta = 1. / (opt.unit_epoch-1.)
+            delta = 1. / (opt.unit_epoch * opt.num_aug * self.len -1.)
             # grow networks
-            if inter_epoch == 0:
+            if inter_step == 0:
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
             # fade in
-            elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
+            elif (inter_step > 0) and (inter_step < opt.unit_epoch * opt.num_aug * self.len):
                 self.G.module.model.fadein.update_alpha(delta)
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
             # flush networks
-            elif inter_epoch == opt.unit_epoch:
+            elif inter_step == opt.unit_epoch * opt.num_aug * self.len:
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
@@ -211,9 +212,10 @@ class trainer:
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
             M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 2
+            inter_step = 0
             for epoch in range(M):
-                current_alpha = self.update_trainer(stage, epoch)
-                self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
+                current_alpha = self.update_trainer(stage, inter_step)
+                self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
@@ -234,6 +236,7 @@ class trainer:
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
                                 .format(stage, total_stages, epoch+1, M, aug+1, opt.num_aug, i+1, len(self.dataloader), G_loss, D_loss, Wasserstein_Dist))
                         global_step += 1
+                        inter_step += 1
                 global_epoch += 1
                 if epoch % disp_circle == disp_circle-1:
                     print('\nlog images...\n')

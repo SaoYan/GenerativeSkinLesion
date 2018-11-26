@@ -95,7 +95,7 @@ class trainer:
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
-            assert inter_epoch < opt.unit_epoch*2, 'Invalid epoch number!'
+            assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
                 self.current_size *= 2
@@ -132,7 +132,7 @@ class trainer:
                 current_alpha = self.G.module.model.fadein.get_alpha()
             except:
                 current_alpha = 1
-                
+
             # move to device & update optimizer
             self.G.to(device)
             self.D.to(device)
