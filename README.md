@@ -46,3 +46,6 @@ python train_gan.py --preprocess
     * [Refer to this commit](https://github.com/SaoYan/GenerativeSkinLesion/commit/d9ad43bb83ec800a539849ccd894545d086f2a16) 在G的fade in阶段，调换了old_to_rgb和old_upsample的顺序
 * 11.18：equalized learning rate的实现部分，bias term手动添加，因为除以常数c只作用在weights上面。[Refer to this commit](https://github.com/SaoYan/GenerativeSkinLesion/commit/2e2e45ea5045e7aeaa77c1a2fa5f90f3506f6549)  
 * 11.19：增加了对G的参数计算exponential moving average (EMA)的代码。模型训练不受影响，但是测试用的G不是当前所得，而是moving average。参见论文Appendix A.1。
+
+## 待验证
+* fade in的参数alpha是每一个iter更新一次还是每一个epoch更新一次？
