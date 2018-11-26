@@ -76,7 +76,7 @@ class trainer:
         ])
         self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
     def update_trainer(self, stage, inter_epoch):
         """
         update status of trainer
@@ -101,7 +101,7 @@ class trainer:
                 ])
                 self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
 
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
@@ -128,9 +128,13 @@ class trainer:
                 current_alpha = self.G.module.model.fadein.get_alpha()
             except:
                 current_alpha = 1
-        self.G.to(device)
-        self.D.to(device)
-        self.G_EMA.to('cpu')
+             
+            # move to devie & update optimizer
+            self.G.to(device)
+            self.D.to(device)
+            self.G_EMA.to('cpu')
+            self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+            self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         print("\ndone\n")
         return current_alpha
     def update_moving_average(self, decay=0.999):
@@ -203,7 +207,6 @@ class trainer:
     def train(self):
         global_step = 0
         global_epoch = 0
-        disp_img = []
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
@@ -211,7 +214,6 @@ class trainer:
             for epoch in range(M):
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
-                disp_img.clear()
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
@@ -222,8 +224,6 @@ class trainer:
                         else:
                             real_data = real_data_current
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
-                        if epoch % disp_circle == disp_circle-1 and aug == 0 and i == 0: # only archive image when necessary, don't waste memory
-                            disp_img.append(real_data) # archive for logging image
                         real_data =  real_data.to(device)
                         G_loss, D_loss, Wasserstein_Dist = self.update_network(real_data)
                         self.update_moving_average()
@@ -237,11 +237,11 @@ class trainer:
                 global_epoch += 1
                 if epoch % disp_circle == disp_circle-1:
                     print('\nlog images...\n')
-                    I_real = utils.make_grid(disp_img[0], nrow=8, normalize=True, scale_each=True)
+                    I_real = utils.make_grid(real_data, nrow=8, normalize=True, scale_each=True)
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
-                        z = torch.FloatTensor(disp_img[0].size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
+                        z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
                         fake_data = self.G_EMA.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=8, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
