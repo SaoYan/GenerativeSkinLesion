@@ -80,7 +80,7 @@ class trainer:
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
     def update_trainer(self, stage, inter_epoch):
         """
         update status of trainer
@@ -105,7 +105,7 @@ class trainer:
                 ])
                 self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
 
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
@@ -132,9 +132,13 @@ class trainer:
                 current_alpha = self.G.module.model.fadein.get_alpha()
             except:
                 current_alpha = 1
-        self.G.to(device)
-        self.D.to(device)
-        self.G_EMA.to('cpu')
+                
+            # move to device & update optimizer
+            self.G.to(device)
+            self.D.to(device)
+            self.G_EMA.to('cpu')
+            self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+            self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         print("\ndone\n")
         return current_alpha
     def update_moving_average(self, decay=0.999):
