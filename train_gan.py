@@ -258,7 +258,7 @@ class trainer:
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
-                        z = torch.FloatTensor(real_data, opt.nz).normal_(0.0, 1.0).to('cpu')
+                        z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
                         fake_data = self.G_EMA.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
