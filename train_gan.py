@@ -211,7 +211,6 @@ class trainer:
     def train(self):
         global_step = 0
         global_epoch = 0
-        disp_img = []
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
@@ -219,7 +218,6 @@ class trainer:
             for epoch in range(M):
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
-                disp_img.clear()
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
@@ -230,8 +228,6 @@ class trainer:
                         else:
                             real_data = real_data_current
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
-                        if epoch % disp_circle == disp_circle-1 and aug == 0 and i == 0: # only archive image when necessary, don't waste memory
-                            disp_img.append(real_data) # archive for logging image
                         real_data =  real_data.to(device)
                         G_loss, D_loss, Wasserstein_Dist = self.update_network(real_data)
                         self.update_moving_average()
@@ -245,11 +241,11 @@ class trainer:
                 global_epoch += 1
                 if epoch % disp_circle == disp_circle-1:
                     print('\nlog images...\n')
-                    I_real = utils.make_grid(disp_img[0], nrow=4, normalize=True, scale_each=True)
+                    I_real = utils.make_grid(real_data, nrow=4, normalize=True, scale_each=True)
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
-                        z = torch.FloatTensor(disp_img[0].size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
+                        z = torch.FloatTensor(real_data, opt.nz).normal_(0.0, 1.0).to('cpu')
                         fake_data = self.G_EMA.forward(z)
                         I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
