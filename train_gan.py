@@ -252,6 +252,7 @@ class trainer:
             # after each stage: save checkpoints
             checkpoint = {
                 'G_state_dict': self.G.module.state_dict(),
+                'G_EMA_state_dict': self.G_EMA.state_dict(),
                 'D_state_dict': self.D.module.state_dict(),
                 'opt_G_state_dict': self.opt_G.state_dict(),
                 'opt_D_state_dict': self.opt_D.state_dict(),
