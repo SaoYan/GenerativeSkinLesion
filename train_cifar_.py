@@ -85,6 +85,7 @@ class trainer:
         :param inter_epoch: epoch number within the current stage; starting from 0 within each stage
         :return current_alpha: value of alpha (parameter for fade in) after updating trainer
         """
+        flag_opt = False
         print("\nupdating trainer ...\n")
         if stage == 1:
             assert inter_step < opt.unit_epoch * self.len, 'Invalid epoch number!'
@@ -110,16 +111,19 @@ class trainer:
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
+                flag_opt = True
             # fade in
             elif (inter_step > 0) and (inter_step < opt.unit_epoch * opt.num_aug * self.len):
                 self.G.module.model.fadein.update_alpha(delta)
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
+                flag_opt = False
             # flush networks
             elif inter_step == opt.unit_epoch * opt.num_aug * self.len:
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
+                flag_opt = True
             # stablization
             else:
                 print("\nnothing to update about trainer ...\n")
@@ -131,11 +135,16 @@ class trainer:
                 current_alpha = 1
 
             # move to devie & update optimizer
-            self.G.to(device)
-            self.D.to(device)
-            self.G_EMA.to('cpu')
-            self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-            self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+            if flag_opt:
+                self.G.to(device)
+                self.D.to(device)
+                self.G_EMA.to('cpu')
+                state_G = self.opt_G.state
+                state_D = self.opt_D.state
+                self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+                self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+                self.opt_G.state = state_G
+                self.opt_D.state = state_D
         print("\ndone\n")
         return current_alpha
     def update_moving_average(self, decay=0.999):
@@ -214,11 +223,11 @@ class trainer:
             M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 2
             inter_step = 0
             for epoch in range(M):
-                current_alpha = self.update_trainer(stage, inter_step)
-                self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
+                        current_alpha = self.update_trainer(stage, inter_step)
+                        self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                         real_data_current, __ = data
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
@@ -249,6 +258,7 @@ class trainer:
                         I_fake = utils.make_grid(fake_data, nrow=8, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
             # after each stage: save checkpoints
+            print('\nsaving checkpoints...\n')
             checkpoint = {
                 'G_state_dict': self.G.module.state_dict(),
                 'G_EMA_state_dict': self.G_EMA.state_dict(),

@@ -12,14 +12,17 @@ if __name__ == "__main__":
     D = Discriminator()
     # D = nn.DataParallel(D, device_ids=[0,1]).to('cuda')
     opt_D = optim.Adam(D.parameters(), lr=0.001, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-    opt_D.step()
-    print(opt_D.state)
+    print(opt_D.state_dict()['param_groups'])
     print('\n\n\n\n')
 
-    # D.grow_network()
-    # opt_D = optim.Adam(D.parameters(), lr=0.001, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-    # print(opt_D.state_dict()['param_groups'])
-    # print('\n\n\n\n')
+    D.grow_network()
+    state_D = opt_D.state
+    opt_D = optim.Adam(D.parameters(), lr=0.001, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+    print(opt_D.state_dict()['param_groups'])
+    print('\n\n\n\n')
+    opt_D.state = state_D
+    print(opt_D.state_dict()['param_groups'])
+    print('\n\n\n\n')
     #
     # D.flush_network()
     # opt_D = optim.Adam(D.parameters(), lr=0.001, betas=(0,0.99), eps=1e-8, weight_decay=0.)
