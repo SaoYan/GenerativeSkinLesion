@@ -272,7 +272,7 @@ class trainer:
                 'opt_D_state_dict': self.opt_D.state_dict(),
                 'stage': stage
             }
-            torch.save(checkpoint, os.path.join(opt.outf,'stage{}.pth'.format(stage)))
+            torch.save(checkpoint, os.path.join(opt.outf,'stage{}.tar'.format(stage)))
 
 #----------------------------------------------------------------------------
 # main function
