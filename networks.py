@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.nn as nn
+import torchvision.models as models
 from layers import *
 
 #----------------------------------------------------------------------------
@@ -211,3 +212,37 @@ class Discriminator(nn.Module):
     def forward(self, x):
         assert len(x.size()) == 4, 'Invalid input size!'
         return self.model(x)
+
+#----------------------------------------------------------------------------
+# Classifier: VGG-16
+class VGG(nn.Module):
+    def __init__(self, num_classes):
+        super(VGG, self).__init__()
+        net = models.vgg16_bn(pretrained=True)
+        self.features = net.features
+        self.dense = nn.Sequential(*list(net.classifier.children())[:-1])
+        self.classifier = nn.Linear(in_features=4096, out_features=num_classes, bias=True)
+        # initialize
+        nn.init.normal_(self.classifier.weight, 0., 0.01)
+        nn.init.constant_(self.classifier.bias, 0.)
+
+    def forward(self, x):
+        N = x.size(0)
+        feature = self.features(x).view(N,-1)
+        dense = self.dense(feature)
+        out = self.classifier(dense)
+        return out
+
+#----------------------------------------------------------------------------
+# Classifier: ResNet-50
+class ResNet(nn.Module):
+    def __init__(self, num_classes):
+        super(ResNet, self).__init__()
+        self.net = models.resnet50(pretrained=True)
+        self.net.fc = nn.Linear(in_features=2048, out_features=num_classes, bias=True)
+        # initialize
+        nn.init.normal_(self.net.fc.weight, 0., 0.01)
+        nn.init.constant_(self.net.fc.bias, 0.)
+
+    def forward(self, x):
+        return self.net(x)
