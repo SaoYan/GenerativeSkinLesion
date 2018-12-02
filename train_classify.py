@@ -44,7 +44,7 @@ def __worker_init_fn__():
 def main():
     # load data
     print('\nloading the dataset ...\n')
-    num_aug = 1
+    num_aug = 5
     im_size = 224
     transform_train = transforms.Compose([
         transforms.Resize((256,256)),
@@ -162,7 +162,7 @@ def main():
             with open('test_results.csv', 'wt', newline='') as csv_file:
                 csv_writer = csv.writer(csv_file, delimiter=',')
                 for i, data in enumerate(testloader, 0):
-                    images_test, labels_test = data['image'], data['label']
+                    images_test, labels_test = data
                     images_test, labels_test = images_test.to(device), labels_test.to(device)
                     if i == 0: # archive images in order to save to logs
                         images_disp.append(images_test[0:16,:,:,:])
