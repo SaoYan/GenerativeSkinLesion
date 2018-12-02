@@ -52,13 +52,15 @@ def main():
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.7560,0.5222,0.5431), (0.0909, 0.1248, 0.1401))
+        # transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
+        transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
     transform_test = transforms.Compose([
         transforms.Resize((256,256)),
         transforms.CenterCrop(im_size),
         transforms.ToTensor(),
-        transforms.Normalize((0.7560,0.5222,0.5431), (0.0909, 0.1248, 0.1401))
+        # transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
+        transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
     trainset = ISIC(csv_file='train.csv', shuffle=True, rotate=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.batch_size, shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
