@@ -25,6 +25,19 @@ def preprocess_data_classify(root_dir):
             writer.writerow([filename] + ['0'])
         for filename in sk:
             writer.writerow([filename] + ['0'])
+    # training data oversample
+    melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg')); melanoma.sort()
+    nevus    = glob.glob(os.path.join(root_dir, 'Train', 'nevus', '*.jpg')); nevus.sort()
+    sk       = glob.glob(os.path.join(root_dir, 'Train', 'seborrheic_keratosis', '*.jpg')); sk.sort()
+    with open('train_oversample.csv', 'wt', newline='') as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        for i in range(4):
+            for filename in melanoma:
+                writer.writerow([filename] + ['1'])
+        for filename in nevus:
+            writer.writerow([filename] + ['0'])
+        for filename in sk:
+            writer.writerow([filename] + ['0'])
     # test data
     melanoma = glob.glob(os.path.join(root_dir, 'Test', 'melanoma', '*.jpg')); melanoma.sort()
     nevus    = glob.glob(os.path.join(root_dir, 'Test', 'nevus', '*.jpg')); nevus.sort()
