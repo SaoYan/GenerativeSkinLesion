@@ -14,6 +14,7 @@ from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
 from data import preprocess_data_gan, ISIC_GAN
+from transforms import *
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
@@ -71,14 +72,16 @@ class trainer:
         self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # data loader
         self.transform = transforms.Compose([
+            RatioCenterCrop(1.)
             transforms.Resize((300,300)),
             transforms.RandomCrop((opt.size,opt.size)),
+            RandomRotate(),
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
             transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.ToTensor()
         ])
-        self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
+        self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
     def update_trainer(self, stage, inter_epoch):
@@ -101,14 +104,16 @@ class trainer:
             if inter_epoch == 0:
                 self.current_size *= 2
                 self.transform = transforms.Compose([
+                    RatioCenterCrop(1.)
                     transforms.Resize((300,300)),
                     transforms.RandomCrop((opt.size,opt.size)),
+                    RandomRotate(),
                     transforms.RandomVerticalFlip(),
                     transforms.RandomHorizontalFlip(),
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.ToTensor()
                 ])
-                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, rotate=True, transform=self.transform)
+                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
 

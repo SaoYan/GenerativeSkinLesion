@@ -52,7 +52,7 @@ def preprocess_data_classify(root_dir):
             writer.writerow([filename] + ['0'])
 
 class ISIC(udata.Dataset):
-    def __init__(self, csv_file, shuffle=True, rotate=True, transform=None):
+    def __init__(self, csv_file, shuffle=True, transform=None):
         file = open(csv_file, newline='')
         reader = csv.reader(file, delimiter=',')
         self.pairs = [row for row in reader]
@@ -66,20 +66,6 @@ class ISIC(udata.Dataset):
         pair = self.pairs[idx]
         image = Image.open(pair[0])
         label = int(pair[1])
-        # center crop
-        # do not crop generated images because they are already 256x256
-        width, height = image.size
-        if width != 256 or height != 256:
-            new_size = 0.8 * min(width, height)
-            left = (width - new_size)/2
-            top = (height - new_size)/2
-            right = (width + new_size)/2
-            bottom = (height + new_size)/2
-            image = image.crop((left, top, right, bottom))
-        # rotate
-        if self.rotate:
-            idx = random.randint(0,3)
-            image = image.rotate(idx*90)
         if self.transform:
             image = self.transform(image)
         return image, label
@@ -97,7 +83,7 @@ def preprocess_data_gan(root_dir):
             writer.writerow([filename])
 
 class ISIC_GAN(udata.Dataset):
-    def __init__(self, csv_file, shuffle=True, rotate=True, transform=None):
+    def __init__(self, csv_file, shuffle=True, transform=None):
         file = open(csv_file, newline='')
         reader = csv.reader(file, delimiter=',')
         self.files = [row for row in reader]
@@ -109,18 +95,6 @@ class ISIC_GAN(udata.Dataset):
         return len(self.files)
     def  __getitem__(self, idx):
         image = Image.open(self.files[idx][0])
-        # center crop
-        width, height = image.size
-        new_size = min(width, height)
-        left = (width - new_size)/2
-        top = (height - new_size)/2
-        right = (width + new_size)/2
-        bottom = (height + new_size)/2
-        image = image.crop((left, top, right, bottom))
-        # rotate
-        if self.rotate:
-            idx = random.randint(0,3)
-            image = image.rotate(idx*90)
         if self.transform:
             image = self.transform(image)
         return image

@@ -15,6 +15,7 @@ import torchvision.transforms as transforms
 from networks import VGG, ResNet
 from data import preprocess_data_classify, ISIC
 from utilities import *
+from transforms import *
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -47,22 +48,25 @@ def main():
     num_aug = 5
     im_size = 224
     transform_train = transforms.Compose([
+        RatioCenterCrop(1.),
         transforms.Resize((256,256)),
         transforms.RandomCrop(im_size),
+        RandomRotate(),
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
     ])
     transform_test = transforms.Compose([
+        RatioCenterCrop(1.),
         transforms.Resize((256,256)),
         transforms.CenterCrop(im_size),
         transforms.ToTensor(),
         transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
     ])
-    trainset = ISIC(csv_file='train_oversample.csv', shuffle=True, rotate=True, transform=transform_train)
+    trainset = ISIC(csv_file='train_oversample.csv', shuffle=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.batch_size, shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
-    testset = ISIC(csv_file='test.csv', shuffle=False, rotate=False, transform=transform_test)
+    testset = ISIC(csv_file='test.csv', shuffle=False, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False, num_workers=8)
     print('\ndone\n')
     '''

@@ -15,6 +15,7 @@ import torchvision.transforms as transforms
 from networks import VGG, ResNet
 from data import preprocess_data_classify, ISIC
 from utilities import *
+from transforms import *
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -47,14 +48,17 @@ def main():
     num_aug = 5
     im_size = 224
     transform_train = transforms.Compose([
+        RatioCenterCrop(1.),
         transforms.Resize((256,256)),
         transforms.RandomCrop(im_size),
+        RandomRotate(),
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
     transform_test = transforms.Compose([
+        RatioCenterCrop(1.),
         transforms.Resize((256,256)),
         transforms.CenterCrop(im_size),
         transforms.ToTensor(),
