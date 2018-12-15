@@ -2,7 +2,9 @@
 
 Using [progressive gorwing of GANs](https://arxiv.org/abs/1710.10196) to augmentation skin lesion dataset.  
 
-This is the code of SFU CMPT-726 (18 Fall) course project. Collaborator: [Yongjun He](https://github.com/Nju141250047), [Ruochen Jiang](https://github.com/VHUCXAONG).
+This is the code of SFU CMPT-726 (18 Fall) course project. Collaborator: [Yongjun He](https://github.com/Nju141250047), [Ruochen Jiang](https://github.com/VHUCXAONG).   
+
+![](https://github.com/SaoYan/GenerativeSkinLesion/blob/master/all_images.png)   
 
 ***
 
