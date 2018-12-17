@@ -89,7 +89,6 @@ class ISIC_GAN(udata.Dataset):
         self.files = [row for row in reader]
         if shuffle:
             random.shuffle(self.files)
-        self.rotate = rotate
         self.transform = transform
     def __len__(self):
         return len(self.files)

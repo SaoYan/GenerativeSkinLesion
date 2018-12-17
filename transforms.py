@@ -18,7 +18,6 @@ class RatioCenterCrop(object):
         img = trF.center_crop(image, new_size)
         return img
 
-
 class RandomRotate(object):
     def __init__(self, resample=False, expand=False, center=None):
         self.resample = resample
