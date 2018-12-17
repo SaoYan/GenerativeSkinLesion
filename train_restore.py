@@ -30,13 +30,14 @@ parser.add_argument("--preprocess", action='store_true')
 
 parser.add_argument("--nc", type=int, default=3, help="number of channels of the generated image")
 parser.add_argument("--nz", type=int, default=512, help="dimension of the input noise")
+parser.add_argument("--current_size", type=int, default=64, help="the final size of the generated image")
 parser.add_argument("--size", type=int, default=256, help="the final size of the generated image")
 
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--unit_epoch", type=int, default=50)
 parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
 parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
-parser.add_argument("--outf", type=str, default="logs", help='path of log files')
+parser.add_argument("--outf", type=str, default="logs_restore", help='path of log files')
 
 opt = parser.parse_args()
 
@@ -60,7 +61,8 @@ def _worker_init_fn_():
 class trainer:
     def __init__(self):
         print("\ninitializing trainer ...\n")
-        self.current_size = 4
+        self.current_size = opt.current_size
+        self.current_stage = int(math.log2(self.current_size/4)) + 1
         self.writer = SummaryWriter(opt.outf)
         self.init_trainer()
         print("\ndone\n")
@@ -69,15 +71,30 @@ class trainer:
         self.G = Generator(nc=opt.nc, nz=opt.nz, size=opt.size)
         self.D = Discriminator(nc=opt.nc, nz=opt.nz, size=opt.size)
         self.G_EMA = copy.deepcopy(self.G)
+        # pre-grow
+        for i in range(self.current_stage - 1):
+            self.G.grow_network()
+            self.D.grow_network()
+            self.G_EMA.grow_network()
+            self.G.flush_network()
+            self.D.flush_network()
+            self.G_EMA.flush_network()
+        # optimizers
+        self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+        self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+        # restore parameters
+        checkpoint = torch.load('checkpoint.pth')
+        self.G.load_state_dict(checkpoint['G_state_dict'])
+        self.D.load_state_dict(checkpoint['D_state_dict'])
+        self.G_EMA.load_state_dict(checkpoint['G_EMA_state_dict'])
+        self.opt_G.load_state_dict(checkpoint['opt_G_state_dict'])
+        self.opt_D.load_state_dict(checkpoint['opt_D_state_dict'])
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=device_ids).to(device)
         self.D = nn.DataParallel(self.D, device_ids=device_ids).to(device)
         self.G_EMA = self.G_EMA.to('cpu') # keep this model on CPU to save GPU memory
         for param in self.G_EMA.parameters():
             param.requires_grad_(False) # turn off grad because G_EMA will only be used for inference
-        # optimizers
-        self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-        self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # data loader
         self.transform = transforms.Compose([
             RatioCenterCrop(1.),
@@ -106,8 +123,8 @@ class trainer:
             current_alpha = 0
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
-            assert stage <= total_stages, 'Invalid stage number!'
-            assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
+            assert stage > self.current_stage and <= total_stages, 'Invalid stage number!'
+            assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
                 self.current_size *= 2
@@ -239,8 +256,8 @@ class trainer:
         global_epoch = 0
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
-        for stage in range(1, total_stages+1):
-            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 2
+        for stage in range(self.current_stage+1, total_stages+1):
+            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 3
             for epoch in range(M):
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
@@ -292,6 +309,6 @@ class trainer:
 # perform training
 if __name__ == "__main__":
     if opt.preprocess:
-        preprocess_data_gan('../data_2017')
+        preprocess_data_gan('../data_2018')
     gan_trainer = trainer()
     gan_trainer.train()
