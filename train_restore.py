@@ -83,7 +83,7 @@ class trainer:
         self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # restore parameters
-        checkpoint = torch.load('checkpoint.pth')
+        checkpoint = torch.load('checkpoint.tar')
         self.G.load_state_dict(checkpoint['G_state_dict'])
         self.D.load_state_dict(checkpoint['D_state_dict'])
         self.G_EMA.load_state_dict(checkpoint['G_EMA_state_dict'])
