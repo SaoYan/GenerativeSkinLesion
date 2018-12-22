@@ -123,7 +123,7 @@ class trainer:
             current_alpha = 0
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
-            assert stage > self.current_stage and <= total_stages, 'Invalid stage number!'
+            assert stage > self.current_stage and stage <= total_stages, 'Invalid stage number!'
             assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
