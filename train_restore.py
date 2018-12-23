@@ -79,22 +79,22 @@ class trainer:
             self.G.flush_network()
             self.D.flush_network()
             self.G_EMA.flush_network()
-        # optimizers
-        self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-        self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # restore parameters
         checkpoint = torch.load('checkpoint.tar')
         self.G.load_state_dict(checkpoint['G_state_dict'])
         self.D.load_state_dict(checkpoint['D_state_dict'])
         self.G_EMA.load_state_dict(checkpoint['G_EMA_state_dict'])
-        self.opt_G.load_state_dict(checkpoint['opt_G_state_dict'])
-        self.opt_D.load_state_dict(checkpoint['opt_D_state_dict'])
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=device_ids).to(device)
         self.D = nn.DataParallel(self.D, device_ids=device_ids).to(device)
         self.G_EMA = self.G_EMA.to('cpu') # keep this model on CPU to save GPU memory
         for param in self.G_EMA.parameters():
             param.requires_grad_(False) # turn off grad because G_EMA will only be used for inference
+        # optimizers
+        self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+        self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+        self.opt_G.load_state_dict(checkpoint['opt_G_state_dict'])
+        self.opt_D.load_state_dict(checkpoint['opt_D_state_dict'])
         # data loader
         self.transform = transforms.Compose([
             RatioCenterCrop(1.),
