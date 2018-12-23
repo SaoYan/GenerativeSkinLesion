@@ -88,12 +88,14 @@ class trainer:
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
             current_alpha = 0
+            print("\nnothing to update about trainer ...\n")
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
+                print("\nupdate dataset ...\n")
                 self.current_size *= 2
                 self.transform = transforms.Compose([
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
@@ -106,18 +108,21 @@ class trainer:
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
             if inter_epoch == 0:
+                print("\grow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
                 flag_opt = True
             # fade in
             elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
+                print("\nfade in ...\n")
                 self.G.module.model.fadein.update_alpha(delta)
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
                 flag_opt = False
             # flush networks
             elif inter_epoch == opt.unit_epoch:
+                print("\nflush networks ...\n")
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
