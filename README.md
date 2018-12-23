@@ -22,7 +22,7 @@ What's more, the code in this repo still requires further tuning~
 * [Pillow](https://github.com/python-pillow/Pillow)  
 
 ## Data  
-[Google Drive Link](https://drive.google.com/drive/folders/1lndmIp75e1uo2cmsdV15yYDMhWRXeCUc?usp=sharing)  
+*Melanoma* image in ISIC 2017 or ISIC 2018 classification task.  
 
 ## Acknowledgement  
 
