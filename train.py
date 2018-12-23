@@ -16,6 +16,14 @@ from networks import Generator, Discriminator
 from data_2017 import preprocess_data_gan, ISIC_GAN
 from transforms import *
 
+###
+# train for stage 1-5
+# device: 4 NVIDIA P100 Pascal GPUs
+# training time: 
+# stage 1: 50 epoch
+# stage 2-4: 50 epoch transition + 50 epoch stability
+# stage 5: 50 epoch transition + 100 epoch stability
+###
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
@@ -108,7 +116,10 @@ class trainer:
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
-            assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
+            if stage <= 4:
+                assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
+            else:
+                assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
                 print("\nupdate dataset ...\n")
@@ -247,7 +258,12 @@ class trainer:
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
-            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 2
+            if stage == 1:
+                M = opt.unit_epoch
+            elif stage <= 4:
+                M = opt.unit_epoch * 2
+            else:
+                M = opt.unit_epoch * 3
             for epoch in range(M):
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
