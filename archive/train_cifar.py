@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description="PGAN-Skin-Lesion")
 parser.add_argument("--preprocess", action='store_true')
 
 parser.add_argument("--nc", type=int, default=3, help="number of channels of the generated image")
-parser.add_argument("--nz", type=int, default=512, help="dimension of the input noise")
+parser.add_argument("--nz", type=int, default=256, help="dimension of the input noise")
 parser.add_argument("--size", type=int, default=32, help="the final size of the generated image")
 
 parser.add_argument("--batch_size", type=int, default=64)
@@ -138,12 +138,14 @@ class trainer:
                 self.G.to(device)
                 self.D.to(device)
                 self.G_EMA.to('cpu')
-                state_G = self.opt_G.state
-                state_D = self.opt_D.state
+                opt_G_state_dict = self.opt_G.state_dict()
+                opt_D_state_dict = self.opt_D.state_dict()
                 self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
                 self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-                self.opt_G.state = state_G
-                self.opt_D.state = state_D
+                opt_G_state_dict['param_groups'] = self.opt_G.state_dict()['param_groups']
+                opt_D_state_dict['param_groups'] = self.opt_D.state_dict()['param_groups']
+                self.opt_G.load_state_dict(opt_G_state_dict)
+                self.opt_D.load_state_dict(opt_D_state_dict)
         print("\ndone\n")
         return current_alpha
     def update_moving_average(self, decay=0.999):
