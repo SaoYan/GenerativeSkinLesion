@@ -17,13 +17,14 @@ from data_2017 import preprocess_data_gan, ISIC_GAN
 from transforms import *
 
 ###
-# train for stage 1-5
+# train for stage 1-7
 # device: 4 NVIDIA P100 Pascal GPUs
-# training time: 
+# training time:
 # stage 1: 50 epoch
 # stage 2-4: 50 epoch transition + 50 epoch stability
-# stage 5: 50 epoch transition + 100 epoch stability
+# stage 5-7: 50 epoch transition + 100 epoch stability
 ###
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 

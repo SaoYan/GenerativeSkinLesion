@@ -13,35 +13,54 @@ from torchvision import transforms, utils, datasets
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
+from data_2017 import preprocess_data_gan, ISIC_GAN
+from transforms import *
+
+###
+# train for stage 1-5
+# device: 4 NVIDIA P100 Pascal GPUs
+# training time:
+# stage 1: 50 epoch
+# stage 2-4: 50 epoch transition + 50 epoch stability
+# stage 5: 50 epoch transition + 100 epoch stability
+###
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 torch.backends.cudnn.benchmark = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device_ids = [0]
+device_ids = [0,1,2,3]
 
 parser = argparse.ArgumentParser(description="PGAN-Skin-Lesion")
 
 parser.add_argument("--preprocess", action='store_true')
 
 parser.add_argument("--nc", type=int, default=3, help="number of channels of the generated image")
-parser.add_argument("--nz", type=int, default=256, help="dimension of the input noise")
-parser.add_argument("--size", type=int, default=32, help="the final size of the generated image")
+parser.add_argument("--nz", type=int, default=512, help="dimension of the input noise")
+parser.add_argument("--size", type=int, default=256, help="the final size of the generated image")
 
-parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--unit_epoch", type=int, default=50)
-parser.add_argument("--num_aug", type=int, default=1, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
+parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
 parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
-parser.add_argument("--outf", type=str, default="logs", help='path of log files')
+parser.add_argument("--outf", type=str, default="logs_step1", help='path of log files')
 
 opt = parser.parse_args()
+
+'''
+switch between ISIC 2017 and 2018
+modify the following contents:
+1. import
+2. root_dir of preprocess_data
+3. num_aug
+'''
 
 #----------------------------------------------------------------------------
 # Trainer
 
-def __worker_init_fn__():
+def _worker_init_fn_():
     torch_seed = torch.initial_seed()
     np_seed = torch_seed // 2**32-1
     random.seed(torch_seed)
@@ -70,12 +89,18 @@ class trainer:
         self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # data loader
         self.transform = transforms.Compose([
+            RatioCenterCrop(1.),
+            transforms.Resize((300,300)),
+            transforms.RandomCrop((opt.size,opt.size)),
+            RandomRotate(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomHorizontalFlip(),
             transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.ToTensor()
         ])
-        self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
+        self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
+            shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
     def update_trainer(self, stage, inter_epoch):
         """
         update status of trainer
@@ -92,7 +117,7 @@ class trainer:
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
-            if stage == 2:
+            if stage <= 4:
                 assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
             else:
                 assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
@@ -101,12 +126,18 @@ class trainer:
                 print("\nupdate dataset ...\n")
                 self.current_size *= 2
                 self.transform = transforms.Compose([
+                    RatioCenterCrop(1.),
+                    transforms.Resize((300,300)),
+                    transforms.RandomCrop((opt.size,opt.size)),
+                    RandomRotate(),
+                    transforms.RandomVerticalFlip(),
+                    transforms.RandomHorizontalFlip(),
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
                     transforms.ToTensor()
                 ])
-                self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=False, transform=self.transform)
+                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
+                    shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
 
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
@@ -227,10 +258,10 @@ class trainer:
         global_epoch = 0
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
-        for stage in range(1, total_stages+1):
+        for stage in range(1, 6):
             if stage == 1:
                 M = opt.unit_epoch
-            elif stage == 2:
+            elif stage <= 4:
                 M = opt.unit_epoch * 2
             else:
                 M = opt.unit_epoch * 3
@@ -240,7 +271,7 @@ class trainer:
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
-                        real_data_current, __ = data
+                        real_data_current = data
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
@@ -260,13 +291,13 @@ class trainer:
                 global_epoch += 1
                 if epoch % disp_circle == disp_circle-1:
                     print('\nlog images...\n')
-                    I_real = utils.make_grid(real_data, nrow=8, normalize=True, scale_each=True)
+                    I_real = utils.make_grid(real_data, nrow=4, normalize=True, scale_each=True)
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
                         z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
                         fake_data = self.G_EMA.forward(z)
-                        I_fake = utils.make_grid(fake_data, nrow=8, normalize=True, scale_each=True)
+                        I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
             # after each stage: save checkpoints
             print('\nsaving checkpoints...\n')

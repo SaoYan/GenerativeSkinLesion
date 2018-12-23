@@ -16,6 +16,13 @@ from networks import Generator, Discriminator
 from data_2017 import preprocess_data_gan, ISIC_GAN
 from transforms import *
 
+###
+# train for stage 6-7
+# device: 4 NVIDIA P100 Pascal GPUs
+# training time:
+# 50 epoch transition + 100 epoch stability
+###
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
@@ -37,7 +44,7 @@ parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--unit_epoch", type=int, default=50)
 parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
 parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
-parser.add_argument("--outf", type=str, default="logs_restore", help='path of log files')
+parser.add_argument("--outf", type=str, default="logs_step2", help='path of log files')
 
 opt = parser.parse_args()
 
@@ -121,10 +128,14 @@ class trainer:
         if stage == 1:
             assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
             current_alpha = 0
+            print("\nnothing to update about trainer ...\n")
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage > self.current_stage and stage <= total_stages, 'Invalid stage number!'
-            assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
+            if stage <= 4:
+                assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
+            else:
+                assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
             # adjust dataloder (new current_size)
             if inter_epoch == 0:
                 self.current_size *= 2
@@ -145,25 +156,28 @@ class trainer:
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
             if inter_epoch == 0:
+                print("\grow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
                 flag_opt = True
             # fade in
             elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
+                print("\nfade in ...\n")
                 self.G.module.model.fadein.update_alpha(delta)
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
                 flag_opt = False
             # flush networks
             elif inter_epoch == opt.unit_epoch:
+                print("\nflush networks ...\n")
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
                 flag_opt = True
             # stablization
             else:
-                print("\nnothing to update about trainer ...\n")
+                print("\nnothing to update ...\n")
 
             # archive alpha
             try:
@@ -259,7 +273,12 @@ class trainer:
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(self.current_stage+1, total_stages+1):
-            M = opt.unit_epoch if stage == 1 else opt.unit_epoch * 3
+            if stage == 1:
+                M = opt.unit_epoch
+            elif stage <= 4:
+                M = opt.unit_epoch * 2
+            else:
+                M = opt.unit_epoch * 3
             for epoch in range(M):
                 current_alpha = self.update_trainer(stage, epoch)
                 self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
