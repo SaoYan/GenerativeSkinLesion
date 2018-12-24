@@ -111,7 +111,7 @@ class trainer:
             delta = 1. / (opt.unit_epoch-1.)
             # grow networks
             if inter_epoch == 0:
-                print("\grow networks ...\n")
+                print("\ngrow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
