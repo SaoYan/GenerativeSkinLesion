@@ -121,8 +121,9 @@ class trainer:
                 assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
             else:
                 assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
-            # adjust dataloder (new current_size)
+            delta = 1. / (opt.unit_epoch-1.)
             if inter_epoch == 0:
+                # adjust dataloder (new current_size)
                 print("\nupdate dataset ...\n")
                 self.current_size *= 2
                 self.transform = transforms.Compose([
@@ -138,41 +139,36 @@ class trainer:
                 self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
-
-            delta = 1. / (opt.unit_epoch-1.)
-            # grow networks
-            if inter_epoch == 0:
+                # grow networks
                 print("\ngrow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
                 flag_opt = True
-            # fade in
             elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
                 print("\nfade in ...\n")
                 self.G.module.model.fadein.update_alpha(delta)
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
                 flag_opt = False
-            # flush networks
             elif inter_epoch == opt.unit_epoch:
                 print("\nflush networks ...\n")
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
                 flag_opt = True
-            # stablization
             else:
-                print("\nnothing to update about trainer ...\n")
-
+                # stablization
+                print("\nnothing to update ...\n")
+                flag_opt = False;
             # archive alpha
             try:
                 current_alpha = self.G.module.model.fadein.get_alpha()
             except:
                 current_alpha = 1
-
             # move to devie & update optimizer
             if flag_opt:
+                print("\nmove to device and update optimizer ...\n")
                 self.G.to(device)
                 self.D.to(device)
                 self.G_EMA.to('cpu')
