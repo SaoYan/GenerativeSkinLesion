@@ -19,7 +19,7 @@ from transforms import *
 ###
 # train for stage 1-5
 # device: 4 NVIDIA P100 Pascal GPUs
-# training time:
+# training time: 1d 10h
 # stage 1: 50 epoch
 # stage 2-4: 50 epoch transition + 50 epoch stability
 # stage 5: 50 epoch transition + 100 epoch stability
