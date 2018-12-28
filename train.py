@@ -69,7 +69,7 @@ def _worker_init_fn_():
 class trainer:
     def __init__(self):
         print("\ninitializing trainer ...\n")
-        self.current_size = 4
+        self.initial_size = 4
         self.writer = SummaryWriter(opt.outf)
         self.init_trainer()
         print("\ndone\n")
@@ -90,12 +90,11 @@ class trainer:
         # data loader
         self.transform = transforms.Compose([
             RatioCenterCrop(1.),
-            transforms.Resize((300,300)),
+            transforms.Resize((300,300), Image.ANTIALIAS),
             transforms.RandomCrop((opt.size,opt.size)),
             RandomRotate(),
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
-            transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
             transforms.ToTensor()
         ])
         self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
@@ -123,23 +122,6 @@ class trainer:
                 assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
             delta = 1. / (opt.unit_epoch-1.)
             if inter_epoch == 0:
-                # adjust dataloder (new current_size)
-                print("\nupdate dataset ...\n")
-                self.current_size *= 2
-                self.transform = transforms.Compose([
-                    RatioCenterCrop(1.),
-                    transforms.Resize((300,300)),
-                    transforms.RandomCrop((opt.size,opt.size)),
-                    RandomRotate(),
-                    transforms.RandomVerticalFlip(),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
-                    transforms.ToTensor()
-                ])
-                self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
-                self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
-                # grow networks
                 print("\ngrow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
@@ -257,6 +239,7 @@ class trainer:
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
         for stage in range(1, total_stages+1):
+            current_size = self.intial_size * (2 ** (stage-1))
             if stage == 1:
                 M = opt.unit_epoch
             elif stage <= 4:
@@ -270,6 +253,7 @@ class trainer:
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
                         real_data_current = data
+                        real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
