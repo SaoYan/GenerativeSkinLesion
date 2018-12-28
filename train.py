@@ -195,7 +195,7 @@ class trainer:
             for name, param_EMA in self.G_EMA.named_parameters():
                 param_G = param_dict_G[name]
                 assert (param_G is not param_EMA)
-                param_EMA.data.copy_(decay * param_EMA.data + (1. - decay) * param_G.detach().cpu())
+                param_EMA.copy_(decay * param_EMA + (1. - decay) * param_G.detach().cpu())
     def update_network(self, real_data):
         """
         perform one step of gradient descent
