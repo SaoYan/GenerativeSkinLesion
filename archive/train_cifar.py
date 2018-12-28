@@ -212,6 +212,7 @@ class trainer:
         global_epoch = 0
         disp_circle = 10 if opt.unit_epoch > 10 else 1
         total_stages = int(math.log2(opt.size/4)) + 1
+        fixed_z = torch.FloatTensor(opt.batch_size, opt.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
             if stage == 1:
                 M = opt.unit_epoch
@@ -224,10 +225,8 @@ class trainer:
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
-                        # current alpha for fading in
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
-                        # train step
                         real_data_current, __ = data
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
@@ -253,8 +252,8 @@ class trainer:
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
-                        z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
-                        fake_data = self.G_EMA.forward(z)
+                        # z = torch.FloatTensor(real_data.size(0), opt.nz).normal_(0.0, 1.0).to('cpu')
+                        fake_data = self.G_EMA.forward(fixed_z)
                         I_fake = utils.make_grid(fake_data, nrow=8, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
             # after each stage: save checkpoints
