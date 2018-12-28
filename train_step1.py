@@ -112,9 +112,9 @@ class trainer:
         if stage == 1:
             current_alpha = 0
         else:
-            flag_opt = False
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
+            flag_opt = False
             delta = 1. / self.tickers
             if inter_ticker == 0:
                 self.G.module.grow_network()
@@ -126,7 +126,7 @@ class trainer:
                 self.D.module.model.fadein.update_alpha(delta)
                 self.G_EMA.model.fadein.update_alpha(delta)
                 flag_opt = False
-            elif inter_ticker == opt.unit_epoch:
+            elif inter_ticker == self.tickers:
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
@@ -242,13 +242,13 @@ class trainer:
         total_stages = int(math.log2(opt.size/4)) + 1
         fixed_z = torch.FloatTensor(opt.batch_size, opt.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, 6):
-            current_size = self.intial_size * (2 ** (stage-1))
             if stage == 1:
                 M = opt.unit_epoch
             elif stage <= 4:
                 M = opt.unit_epoch * 2
             else:
                 M = opt.unit_epoch * 3
+            current_size = self.intial_size * (2 ** (stage-1))
             ticker = 0
             for epoch in range(M):
                 torch.cuda.empty_cache()

@@ -215,13 +215,13 @@ class trainer:
         total_stages = int(math.log2(opt.size/4)) + 1
         fixed_z = torch.FloatTensor(opt.batch_size, opt.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
-            current_size = self.intial_size * (2 ** (stage-1))
             if stage == 1:
                 M = opt.unit_epoch
             elif stage == 2:
                 M = opt.unit_epoch * 2
             else:
                 M = opt.unit_epoch * 3
+            current_size = self.intial_size * (2 ** (stage-1))
             ticker = 0
             for epoch in range(M):
                 torch.cuda.empty_cache()
