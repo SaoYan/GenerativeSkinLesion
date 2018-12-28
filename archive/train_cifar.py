@@ -116,16 +116,30 @@ class trainer:
                 self.G.to(device)
                 self.D.to(device)
                 self.G_EMA.to('cpu')
+                # opt_G
+                opt_G_state_dict = self.opt_G.state_dict()
+                old_opt_G_state = opt_G_state_dict['state']
                 self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
+                new_opt_G_param_id =  self.opt_G.state_dict()['param_groups'][0]['params']
+                opt_G_state = copy.deepcopy(old_opt_G_state)
+                for key in old_opt_G_state.keys():
+                    if key not in new_opt_G_param_id:
+                        del opt_G_state[key]
+                opt_G_state_dict['param_groups'] = self.opt_G.state_dict()['param_groups']
+                opt_G_state_dict['state'] = opt_G_state
+                self.opt_G.load_state_dict(opt_G_state_dict)
+                # opt_D
+                opt_D_state_dict = self.opt_D.state_dict()
+                old_opt_D_state = opt_D_state_dict['state']
                 self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-                # opt_G_state_dict = self.opt_G.state_dict()
-                # opt_D_state_dict = self.opt_D.state_dict()
-                # self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-                # self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
-                # opt_G_state_dict['param_groups'] = self.opt_G.state_dict()['param_groups']
-                # opt_D_state_dict['param_groups'] = self.opt_D.state_dict()['param_groups']
-                # self.opt_G.load_state_dict(opt_G_state_dict)
-                # self.opt_D.load_state_dict(opt_D_state_dict)
+                new_opt_D_param_id =  self.opt_D.state_dict()['param_groups'][0]['params']
+                opt_D_state = copy.deepcopy(old_opt_D_state)
+                for key in old_opt_D_state.keys():
+                    if key not in new_opt_D_param_id:
+                        del opt_D_state[key]
+                opt_D_state_dict['param_groups'] = self.opt_D.state_dict()['param_groups']
+                opt_D_state_dict['state'] = opt_D_state
+                self.opt_D.load_state_dict(opt_D_state_dict)
         return current_alpha
     def update_moving_average(self, decay=0.999):
         """
