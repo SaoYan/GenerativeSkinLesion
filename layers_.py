@@ -1,4 +1,4 @@
-import numpy as np
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,7 +19,7 @@ class EqualizedConv2d(nn.Module):
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = kernel_size * kernel_size * in_features
-        self.scale = sqrt(2) / sqrt(fan_in)
+        self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv2d(input=x,
                         weight=self.weight_param * self.scale,  # scale the weight on runtime
@@ -38,7 +38,7 @@ class EqualizedDeconv2d(nn.Module):
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = in_features
-        self.scale = sqrt(2) / sqrt(fan_in)
+        self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv_transpose2d(input=x,
                                   weight=self.weight_param * self.scale,  # scale the weight on runtime
@@ -55,7 +55,7 @@ class EqualizedLinear(nn.Module):
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = in_features
-        self.scale = sqrt(2) / sqrt(fan_in)
+        self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.linear(x, self.weight_param * self.scale,
                         self.bias_param if self.bias else None)
