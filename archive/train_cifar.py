@@ -76,28 +76,25 @@ class trainer:
         self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
-    def update_trainer(self, stage, inter_epoch):
+        # tickers (used for fading in)
+        self.tickers = opt.unit_epoch * opt.num_aug * len(self.dataloader)
+        self.delta = 1. / self.tickers
+    def update_trainer(self, stage, inter_ticker):
         """
         update status of trainer
         :param stage: stage number; starting from 1
-        :param inter_epoch: epoch number within the current stage; starting from 0 within each stage
+        :param inter_ticker: epoch number within the current stage; starting from 0 within each stage
         :return current_alpha: value of alpha (parameter for fade in) after updating trainer
         """
         flag_opt = False
         print("\nupdating trainer ...\n")
         if stage == 1:
-            assert inter_epoch < opt.unit_epoch, 'Invalid epoch number!'
             current_alpha = 0
             print("\nnothing to update ...\n")
         else:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
-            if stage == 2:
-                assert inter_epoch < opt.unit_epoch * 2, 'Invalid epoch number!'
-            else:
-                assert inter_epoch < opt.unit_epoch * 3, 'Invalid epoch number!'
-            delta = 1. / (opt.unit_epoch-1.)
-            if inter_epoch == 0:
+            if inter_ticker == 0:
                 # adjust dataloder (new current_size)
                 print("\nupdate dataset ...\n")
                 self.current_size *= 2
@@ -114,13 +111,13 @@ class trainer:
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
                 flag_opt = True
-            elif (inter_epoch > 0) and (inter_epoch < opt.unit_epoch):
+            elif (inter_ticker > 0) and (inter_ticker < self.tickers):
                 print("\nfade in ...\n")
-                self.G.module.model.fadein.update_alpha(delta)
-                self.D.module.model.fadein.update_alpha(delta)
-                self.G_EMA.model.fadein.update_alpha(delta)
+                self.G.module.model.fadein.update_alpha(self.delta)
+                self.D.module.model.fadein.update_alpha(self.delta)
+                self.G_EMA.model.fadein.update_alpha(self.delta)
                 flag_opt = False
-            elif inter_epoch == opt.unit_epoch:
+            elif inter_ticker == self.tickers:
                 print("\nflush networks ...\n")
                 self.G.module.flush_network()
                 self.D.module.flush_network()
@@ -232,12 +229,15 @@ class trainer:
                 M = opt.unit_epoch * 2
             else:
                 M = opt.unit_epoch * 3
+            ticker = 0
             for epoch in range(M):
-                current_alpha = self.update_trainer(stage, epoch)
-                self.writer.add_scalar('archive/current_alpha', current_alpha, global_epoch)
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
+                        # current alpha for fading in
+                        current_alpha = self.update_trainer(stage, ticker)
+                        self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
+                        # train step
                         real_data_current, __ = data
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
@@ -255,6 +255,7 @@ class trainer:
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
                                 .format(stage, total_stages, epoch+1, M, aug+1, opt.num_aug, i+1, len(self.dataloader), G_loss, D_loss, Wasserstein_Dist))
                         global_step += 1
+                        ticker += 1
                 global_epoch += 1
                 if epoch % disp_circle == disp_circle-1:
                     print('\nlog images...\n')
