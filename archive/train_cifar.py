@@ -69,10 +69,7 @@ class trainer:
         self.opt_G = optim.Adam(self.G.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         self.opt_D = optim.Adam(self.D.parameters(), lr=opt.lr, betas=(0,0.99), eps=1e-8, weight_decay=0.)
         # data loader
-        self.transform = transforms.Compose([
-            transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
-            transforms.ToTensor()
-        ])
+        self.transform = transforms.ToTensor()
         self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
@@ -93,16 +90,6 @@ class trainer:
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             if inter_ticker == 0:
-                # adjust dataloder (new current_size)
-                self.current_size *= 2
-                self.transform = transforms.Compose([
-                    transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
-                    transforms.ToTensor()
-                ])
-                self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=False, transform=self.transform)
-                self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-                    shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
-                # grow networks
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
@@ -214,6 +201,7 @@ class trainer:
         total_stages = int(math.log2(opt.size/4)) + 1
         fixed_z = torch.FloatTensor(opt.batch_size, opt.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
+            self.current_size = self.current_size * (2 ** (stage-1))
             if stage == 1:
                 M = opt.unit_epoch
             elif stage == 2:
@@ -228,6 +216,7 @@ class trainer:
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                         real_data_current, __ = data
+                        real_data_current = F.adaptive_avg_pool2d(real_data_current, self.current_size)
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
