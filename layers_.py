@@ -57,8 +57,9 @@ class EqualizedLinear(nn.Module):
         fan_in = in_features
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
-        return F.linear(x, self.weight_param * self.scale,
-                        self.bias_param if self.bias else None)
+        N = x.size(0)
+        return F.linear(input=x.view(N,-1), weight=self.weight_param * self.scale,
+                        bias=self.bias_param if self.bias else None)
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.
