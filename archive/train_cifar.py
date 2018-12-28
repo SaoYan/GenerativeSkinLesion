@@ -86,17 +86,14 @@ class trainer:
         :param inter_ticker: epoch number within the current stage; starting from 0 within each stage
         :return current_alpha: value of alpha (parameter for fade in) after updating trainer
         """
-        flag_opt = False
-        print("\nupdating trainer ...\n")
         if stage == 1:
             current_alpha = 0
-            print("\nnothing to update ...\n")
         else:
+            flag_opt = False
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             if inter_ticker == 0:
                 # adjust dataloder (new current_size)
-                print("\nupdate dataset ...\n")
                 self.current_size *= 2
                 self.transform = transforms.Compose([
                     transforms.Resize((self.current_size,self.current_size), Image.ANTIALIAS),
@@ -106,26 +103,21 @@ class trainer:
                 self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
                     shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
                 # grow networks
-                print("\ngrow networks ...\n")
                 self.G.module.grow_network()
                 self.D.module.grow_network()
                 self.G_EMA.grow_network()
                 flag_opt = True
             elif (inter_ticker > 0) and (inter_ticker < self.tickers):
-                print("\nfade in ...\n")
                 self.G.module.model.fadein.update_alpha(self.delta)
                 self.D.module.model.fadein.update_alpha(self.delta)
                 self.G_EMA.model.fadein.update_alpha(self.delta)
                 flag_opt = False
             elif inter_ticker == self.tickers:
-                print("\nflush networks ...\n")
                 self.G.module.flush_network()
                 self.D.module.flush_network()
                 self.G_EMA.flush_network()
                 flag_opt = True
             else:
-                # stablization
-                print("\nnothing to update ...\n")
                 flag_opt = False
             # archive alpha
             try:
@@ -134,7 +126,6 @@ class trainer:
                 current_alpha = 1
             # move to devie & update optimizer
             if flag_opt:
-                print("\nmove to device and update optimizer ...\n")
                 self.G.to(device)
                 self.D.to(device)
                 self.G_EMA.to('cpu')
@@ -148,7 +139,6 @@ class trainer:
                 # opt_D_state_dict['param_groups'] = self.opt_D.state_dict()['param_groups']
                 # self.opt_G.load_state_dict(opt_G_state_dict)
                 # self.opt_D.load_state_dict(opt_D_state_dict)
-        print("\ndone\n")
         return current_alpha
     def update_moving_average(self, decay=0.999):
         """
