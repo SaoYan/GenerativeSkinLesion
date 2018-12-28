@@ -50,7 +50,7 @@ def __worker_init_fn__():
 class trainer:
     def __init__(self):
         print("\ninitializing trainer ...\n")
-        self.current_size = 4
+        self.intial_size = 4
         self.writer = SummaryWriter(opt.outf)
         self.init_trainer()
         print("\ndone\n")
@@ -75,7 +75,6 @@ class trainer:
             shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
         # tickers (used for fading in)
         self.tickers = opt.unit_epoch * opt.num_aug * len(self.dataloader)
-        self.delta = 1. / self.tickers
     def update_trainer(self, stage, inter_ticker):
         """
         update status of trainer
@@ -87,6 +86,7 @@ class trainer:
             current_alpha = 0
         else:
             flag_opt = False
+            delta = 1. / self.tickers
             total_stages = int(math.log2(opt.size/4)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             if inter_ticker == 0:
@@ -95,9 +95,9 @@ class trainer:
                 self.G_EMA.grow_network()
                 flag_opt = True
             elif (inter_ticker > 0) and (inter_ticker < self.tickers):
-                self.G.module.model.fadein.update_alpha(self.delta)
-                self.D.module.model.fadein.update_alpha(self.delta)
-                self.G_EMA.model.fadein.update_alpha(self.delta)
+                self.G.module.model.fadein.update_alpha(delta)
+                self.D.module.model.fadein.update_alpha(delta)
+                self.G_EMA.model.fadein.update_alpha(delta)
                 flag_opt = False
             elif inter_ticker == self.tickers:
                 self.G.module.flush_network()
@@ -201,7 +201,7 @@ class trainer:
         total_stages = int(math.log2(opt.size/4)) + 1
         fixed_z = torch.FloatTensor(opt.batch_size, opt.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
-            self.current_size = self.current_size * (2 ** (stage-1))
+            current_size = self.intial_size * (2 ** (stage-1))
             if stage == 1:
                 M = opt.unit_epoch
             elif stage == 2:
@@ -216,7 +216,7 @@ class trainer:
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                         real_data_current, __ = data
-                        real_data_current = F.adaptive_avg_pool2d(real_data_current, self.current_size)
+                        real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
                         if stage > 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
