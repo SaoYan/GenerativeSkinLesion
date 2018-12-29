@@ -248,7 +248,7 @@ class trainer:
                 M = opt.unit_epoch * 2
             else:
                 M = opt.unit_epoch * 3
-            current_size = self.intial_size * (2 ** (stage-1))
+            current_size = self.initial_size * (2 ** (stage-1))
             ticker = 0
             for epoch in range(M):
                 torch.cuda.empty_cache()
