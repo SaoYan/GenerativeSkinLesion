@@ -116,7 +116,7 @@ class trainer:
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
         # tickers (used for fading in)
-	    self.tickers = opt.unit_epoch * opt.num_aug * len(self.dataloader)
+        self.tickers = opt.unit_epoch * opt.num_aug * len(self.dataloader)
     def update_trainer(self, stage, inter_ticker):
         """
         update status of trainer
