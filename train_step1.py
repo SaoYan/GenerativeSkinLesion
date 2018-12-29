@@ -254,8 +254,8 @@ class trainer:
                 torch.cuda.empty_cache()
                 for aug in range(opt.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
-	                    current_alpha = self.update_trainer(stage, ticker)
-	                    self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
+                        current_alpha = self.update_trainer(stage, ticker)
+                        self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                         real_data_current = data
                         real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
                         if stage > 1:
