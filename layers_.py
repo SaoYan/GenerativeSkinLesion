@@ -66,19 +66,15 @@ class EqualizedLinear(nn.Module):
 # reference: https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L127
 
 class MinibatchStddev(nn.Module):
-    def __init__(self, group_size=4):
+    def __init__(self):
         super(MinibatchStddev, self).__init__()
-        self.group_size = group_size
     def forward(self, x):
-        G = min(self.group_size, x.size(0)) if (x.size(0) % self.group_size == 0) else x.size(0)
-        M = int(x.size(0) / G)
-        y = torch.reshape(x, (G, M, x.size(1), x.size(2), x.size(3)))     # [GMCHW] Split minibatch into M groups of size G.
-        y = y - torch.mean(y, dim=0, keepdim=True)                        # [GMCHW] Subtract mean over group.
-        y = torch.mean(y.pow(2.), dim=0, keepdim=False)                   # [MCHW]  Calc variance over group.
-        y = torch.sqrt(y + 1e-8)                                          # [MCHW]  Calc stddev over group.
-        y = torch.mean(y.view(M,-1), dim=1, keepdim=False).view(M,1,1,1)  # [M111]  Take average over fmaps and pixels.
-        y = y.repeat(G,1,x.size(2), x.size(3))                            # [N1HW]  Replicate over group and pixels.
-        return torch.cat([x, y], 1)                                       # [NCHW]  Append as new fmap.
+        y = x - torch.mean(x, dim=0, keepdim=True)       # [NCHW] Subtract mean over batch.
+        y = torch.mean(y.pow(2.), dim=0, keepdim=False)  # [CHW]  Calc variance over batch.
+        y = torch.sqrt(y + 1e-8)                         # [CHW]  Calc stddev over batch.
+        y = torch.mean(y).view(1,1,1,1)                  # [1111] Take average over fmaps and pixels.
+        y = y.repeat(x.size(0),1,x.size(2),x.size(3))    # [N1HW] Replicate over batch and pixels.
+        return torch.cat([x, y], 1)                      # [N(C+1)HW] Append as new fmap.
 
 #----------------------------------------------------------------------------
 # Pixelwise feature vector normalization.
