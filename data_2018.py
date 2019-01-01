@@ -11,7 +11,7 @@ import torch.utils.data as udata
 #----------------------------------------------------------------------------
 # prepare data for training GAN
 
-def preprocess_data(root_dir):
+def preprocess_data_gan(root_dir):
     print('pre-processing data for GAN ...\n')
     # training data
     MEL   = glob.glob(os.path.join(root_dir, 'Train', 'MEL', '*.jpg')); MEL.sort()

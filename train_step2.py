@@ -68,8 +68,8 @@ def _worker_init_fn_():
 class trainer:
     def __init__(self):
         print("\ninitializing trainer ...\n")
-        self.initial_size = opt.restore_size
-        self.current_stage = int(math.log2(self.initial_size/4)) + 1
+        self.initial_size = 4
+        self.current_stage = int(math.log2(opt.restore_size/4)) + 1
         self.writer = SummaryWriter(opt.outf)
         self.init_trainer()
         print("\ndone\n")
