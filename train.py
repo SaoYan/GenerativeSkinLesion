@@ -13,7 +13,7 @@ from torchvision import transforms, utils, datasets
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
-from data_2017 import preprocess_data_gan, ISIC_GAN
+from data_2018 import preprocess_data_gan, ISIC_GAN
 from transforms import *
 
 ###
@@ -302,6 +302,6 @@ class trainer:
 # perform training
 if __name__ == "__main__":
     if opt.preprocess:
-        preprocess_data_gan('../data_2017')
+        preprocess_data_gan('../data_2018')
     gan_trainer = trainer()
     gan_trainer.train()

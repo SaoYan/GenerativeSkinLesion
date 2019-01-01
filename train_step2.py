@@ -13,7 +13,7 @@ from torchvision import transforms, utils, datasets
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
-from data_2017 import preprocess_data_gan, ISIC_GAN
+from data_2018 import preprocess_data_gan, ISIC_GAN
 from transforms import *
 
 ###
@@ -279,7 +279,7 @@ class trainer:
                         else:
                             real_data = real_data_current
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
-                        real_data =  real_data.to(device)
+                        real_data = real_data.to(device)
                         G_loss, D_loss, Wasserstein_Dist = self.update_network(real_data)
                         self.update_moving_average()
                         if i % 10 == 0:
