@@ -41,7 +41,7 @@ opt = parser.parse_args()
 #----------------------------------------------------------------------------
 # Trainer
 
-def __worker_init_fn__():
+def _worker_init_fn_():
     torch_seed = torch.initial_seed()
     np_seed = torch_seed // 2**32-1
     random.seed(torch_seed)
@@ -72,7 +72,7 @@ class trainer:
         self.transform = transforms.ToTensor()
         self.dataset = datasets.CIFAR10(root='CIFAR10_data', train=True, download=True, transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__(), drop_last=True)
+            shuffle=True, num_workers=4, worker_init_fn=_worker_init_fn_(), drop_last=True)
         # tickers (used for fading in)
         self.tickers = opt.unit_epoch * opt.num_aug * len(self.dataloader)
     def update_trainer(self, stage, inter_ticker):
