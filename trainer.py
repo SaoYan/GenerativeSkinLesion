@@ -33,7 +33,7 @@ class Trainer:
         self.num_aug = config.num_aug
         self.lr = config.lr
         self.outf = config.outf
-        self.devie = device
+        self.device = device
         self.device_ids = device_ids
         self.writer = SummaryWriter(self.outf)
         self.init_trainer()
@@ -213,7 +213,7 @@ class Trainer:
                 M = self.unit_epoch * 2
             else:
                 M = self.unit_epoch * 3
-            current_size = self.initial_size * (2 ** (stage-1))
+            current_size = self.init_size * (2 ** (stage-1))
             ticker = 0
             for epoch in range(M):
                 torch.cuda.empty_cache()

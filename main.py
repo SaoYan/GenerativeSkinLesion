@@ -1,4 +1,5 @@
 import os
+import torch
 import argparse
 from trainer import Trainer
 from data_gan import preprocess_data_gan_2017, preprocess_data_gan_2018
