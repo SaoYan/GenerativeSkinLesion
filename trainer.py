@@ -77,7 +77,7 @@ class Trainer:
         if stage == 1:
             current_alpha = 0
         else:
-            total_stages = int(math.log2(self.size/4)) + 1
+            total_stages = int(math.log2(self.size/self.init_size)) + 1
             assert stage <= total_stages, 'Invalid stage number!'
             flag_opt = False
             delta = 1. / self.tickers
@@ -203,8 +203,7 @@ class Trainer:
     def train(self):
         global_step = 0
         global_epoch = 0
-        disp_circle = 10 if self.unit_epoch > 10 else 1
-        total_stages = int(math.log2(self.size/4)) + 1
+        total_stages = int(math.log2(self.size/self.init_size)) + 1
         fixed_z = torch.FloatTensor(self.batch_size, self.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
             if stage == 1:
@@ -241,7 +240,8 @@ class Trainer:
                         global_step += 1
                         ticker += 1
                 global_epoch += 1
-                if epoch % disp_circle == disp_circle-1:
+                if epoch % 10 == 9:
+                    # log image
                     print('\nlog images...\n')
                     I_real = utils.make_grid(real_data, nrow=4, normalize=True, scale_each=True)
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
@@ -250,14 +250,14 @@ class Trainer:
                         fake_data = self.G_EMA.forward(fixed_z)
                         I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
                         self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
-            # after each stage: save checkpoints
-            print('\nsaving checkpoints...\n')
-            checkpoint = {
-                'G_state_dict': self.G.module.state_dict(),
-                'G_EMA_state_dict': self.G_EMA.state_dict(),
-                'D_state_dict': self.D.module.state_dict(),
-                'opt_G_state_dict': self.opt_G.state_dict(),
-                'opt_D_state_dict': self.opt_D.state_dict(),
-                'stage': stage
-            }
-            torch.save(checkpoint, os.path.join(self.outf,'stage{}.tar'.format(stage)))
+                    # save checkpoints
+                    print('\nsaving checkpoints...\n')
+                    checkpoint = {
+                        'G_state_dict': self.G.module.state_dict(),
+                        'G_EMA_state_dict': self.G_EMA.state_dict(),
+                        'D_state_dict': self.D.module.state_dict(),
+                        'opt_G_state_dict': self.opt_G.state_dict(),
+                        'opt_D_state_dict': self.opt_D.state_dict(),
+                        'stage': stage
+                    }
+                    torch.save(checkpoint, os.path.join(self.outf,'stage{}.tar'.format(stage))) # overwrite if exist

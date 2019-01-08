@@ -2,22 +2,20 @@ import os
 import torch
 import argparse
 from trainer import Trainer
-from data_gan import preprocess_data_gan_2017, preprocess_data_gan_2018
+from gen import ImageGenerator
+from data_gan import preprocess_data_gan
 
 ###
-# train for stage 1-7
+# training:
 # device: 4 NVIDIA P100 Pascal GPUs
 # training time: ~4d
 # stage 1: 50 epoch
-# stage 2-4: 50 epoch transition + 50 epoch stability
+# stage 2-7: 50 epoch transition + 50 epoch stability
 # stage 5-7: 50 epoch transition + 100 epoch stability
 ###
 
 ###
-# switch between ISIC 2017 and 2018
-# modify the following contents:
-# 1. root_dir of preprocess_data
-# 2. num_aug
+# num_aug: 10 for ISIC 2017; 5 for ISIC 2018
 ###
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -31,8 +29,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="PGAN-Skin-Lesion")
 
-    # data preprocess
-    parser.add_argument("--preprocess", action='store_true')
+    parser.add_argument("--preprocess", action="store_true")
+    parser.add_argument("--mode", type=str, default="train", help="train / test")
 
     # network architecture
     parser.add_argument("--nc", type=int, default=3, help="number of channels of the generated image")
@@ -50,6 +48,13 @@ if __name__ == "__main__":
     arg = parser.parse_args()
 
     if arg.preprocess:
-        preprocess_data_gan_2018('../data_2018')
-    gan_trainer = Trainer(arg, device, device_ids)
-    gan_trainer.train()
+        # preprocess_data_gan('../data_2018/Train/MEL')
+        preprocess_data_gan('../data_2017/Train/melanoma')
+
+    assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
+    if arg.mode == "train":
+        gan_trainer = Trainer(arg, device, device_ids)
+        gan_trainer.train()
+    if arg.mode == "test":
+        gan_generator = ImageGenerator(arg, device)
+        gan_generator.generate(1000)

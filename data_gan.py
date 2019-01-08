@@ -8,22 +8,13 @@ import numpy as np
 import torch
 import torch.utils.data as udata
 
-def preprocess_data_gan_2017(root_dir):
+def preprocess_data_gan(root_dir):
     print('pre-processing data for GAN ...\n')
-    melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg'))
+    melanoma = glob.glob(os.path.join(root_dir, '*.jpg'))
     melanoma.sort()
     with open('train_gan.csv', 'wt', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         for filename in melanoma:
-            writer.writerow([filename])
-
-def preprocess_data_gan_2018(root_dir):
-    print('pre-processing data for GAN ...\n')
-    # training data
-    MEL   = glob.glob(os.path.join(root_dir, 'Train', 'MEL', '*.jpg')); MEL.sort()
-    with open('train_gan.csv', 'wt', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
-        for filename in MEL:
             writer.writerow([filename])
 
 class ISIC_GAN(udata.Dataset):
