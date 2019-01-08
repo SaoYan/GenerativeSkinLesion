@@ -47,9 +47,9 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
-    config = parser.parse_args()
+    arg = parser.parse_args()
 
-    if config.preprocess:
+    if arg.preprocess:
         preprocess_data_gan_2018('../data_2018')
-    gan_trainer = Trainer(config, device, device_ids)
+    gan_trainer = Trainer(arg, device, device_ids)
     gan_trainer.train()

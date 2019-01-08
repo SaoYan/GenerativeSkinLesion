@@ -22,17 +22,17 @@ def _worker_init_fn_():
     np.random.seed(np_seed)
 
 class Trainer:
-    def __init__(self, config, device, device_ids):
+    def __init__(self, arg, device, device_ids):
         print("\ninitializing trainer ...\n")
-        self.nc = config.nc
-        self.nz = config.nz
-        self.init_size = config.init_size
-        self.size = config.size
-        self.batch_size = config.batch_size
-        self.unit_epoch = config.unit_epoch
-        self.num_aug = config.num_aug
-        self.lr = config.lr
-        self.outf = config.outf
+        self.nc = arg.nc
+        self.nz = arg.nz
+        self.init_size = arg.init_size
+        self.size = arg.size
+        self.batch_size = arg.batch_size
+        self.unit_epoch = arg.unit_epoch
+        self.num_aug = arg.num_aug
+        self.lr = arg.lr
+        self.outf = arg.outf
         self.device = device
         self.device_ids = device_ids
         self.writer = SummaryWriter(self.outf)
