@@ -5,7 +5,6 @@ import torch.nn.functional as F
 
 #----------------------------------------------------------------------------
 # Equalized learning rate.
-# reference: https://github.com/akanimax/pro_gan_pytorch/blob/master/pro_gan_pytorch/CustomLayers.py
 
 class EqualizedConv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
