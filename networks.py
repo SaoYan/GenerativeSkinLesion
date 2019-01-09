@@ -39,11 +39,6 @@ def deepcopy_exclude(module, exclude_name):
             new_module[-1].load_state_dict(m.state_dict()) # copy weights
     return new_module
 
-#----------------------------------------------------------------------------
-# Generator.
-# reference 1: https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L144
-# reference 2: https://github.com/nashory/pggan-pytorch/blob/master/network.py#L64
-
 class Generator(nn.Module):
     def __init__(self, nc=3, nz=512, size=256):
         super(Generator, self).__init__()
@@ -69,10 +64,6 @@ class Generator(nn.Module):
         return  nn.Sequential(*layers)
     def to_rgb_block(self, ndim):
         return EqualizedConv2d(in_features=ndim, out_features=self.nc, kernel_size=1, stride=1, padding=0)
-        # layers = []
-        # layers.append(EqualizedConv2d(in_features=ndim, out_features=self.nc, kernel_size=1, stride=1, padding=0))
-        # layers.append(nn.Tanh())
-        # return  nn.Sequential(*layers)
     def intermediate_block(self, stage):
         assert stage > 1, 'For intermediate blocks, stage should be larger than 1!'
         assert stage <= self.stages, 'Exceeding the maximum stage number!'
@@ -123,11 +114,6 @@ class Generator(nn.Module):
         if len(x.size()) == 2:
             x = x.view(x.size(0), x.size(1), 1, 1)
         return self.model(x)
-
-#----------------------------------------------------------------------------
-# Discriminator.
-# reference 1: https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L234
-# reference 2: https://github.com/nashory/pggan-pytorch/blob/master/network.py#L191
 
 class Discriminator(nn.Module):
     def __init__(self, nc=3, nz=512, size=256):
