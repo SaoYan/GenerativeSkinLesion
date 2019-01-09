@@ -14,14 +14,10 @@ class EqualizedConv2d(nn.Module):
         nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.conv.weight.data.pow(2.).mean().sqrt()
-        self.conv.weight.data.copy_(self.conv.weight.data / self.scale)
+        self.scale = self.conv.weight.detach().pow(2.).mean().sqrt().item()
+        self.conv.weight.div_(self.scale)
     def forward(self, x):
-        try:
-            dev_scale = self.scale.to(x.get_device())
-        except RuntimeError:
-            dev_scale = self.scale
-        x = self.conv(x.mul(dev_scale))
+        x = self.conv(x.mul(self.scale))
         if self.bias:
             return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
         return x
@@ -34,14 +30,10 @@ class EqualizedDeconv2d(nn.Module):
         nn.init.kaiming_normal_(self.deconv.weight, a=nn.init.calculate_gain('conv2d'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.deconv.weight.data.pow(2.).mean().sqrt()
-        self.deconv.weight.data.copy_(self.deconv.weight.data / self.scale)
+        self.scale = self.deconv.weight.detach().pow(2.).mean().sqrt().item()
+        self.deconv.weight.div_(self.scale)
     def forward(self, x):
-        try:
-            dev_scale = self.scale.to(x.get_device())
-        except RuntimeError:
-            dev_scale = self.scale
-        x = self.deconv(x.mul(dev_scale))
+        x = self.deconv(x.mul(self.scale))
         if self.bias:
             return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
         return x
@@ -54,15 +46,11 @@ class EqualizedLinear(nn.Module):
         nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.linear.weight.data.pow(2.).mean().sqrt()
-        self.linear.weight.data.copy_(self.linear.weight.data / self.scale)
+        self.scale = self.linear.weight.detach().pow(2.).mean().sqrt().item()
+        self.linear.weight.div_(self.scale)
     def forward(self, x):
-        try:
-            dev_scale = self.scale.to(x.get_device())
-        except RuntimeError:
-            dev_scale = self.scale
         N = x.size(0)
-        x = self.linear(x.view(N,-1).mul(dev_scale))
+        x = self.linear(x.view(N,-1).mul(self.scale))
         if self.bias:
             return x + self.bias_param.view(1, -1).expand_as(x)
         return x
