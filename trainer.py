@@ -24,12 +24,16 @@ def _worker_init_fn_():
 class Trainer:
     def __init__(self, arg, device, device_ids):
         print("\ninitializing trainer ...\n")
+        # network architecture
         self.nc = arg.nc
         self.nz = arg.nz
         self.init_size = arg.init_size
         self.size = arg.size
+        # training
         self.batch_size = arg.batch_size
         self.unit_epoch = arg.unit_epoch
+        self.lambda_gp  = arg.lambda_gp
+        self.lambda_drift = arg.lambda_drift
         self.num_aug = arg.num_aug
         self.lr = arg.lr
         self.outf = arg.outf
@@ -148,7 +152,7 @@ class Trainer:
         # D loss - real data
         pred_real = self.D.forward(real_data)
         loss_real = pred_real.mean().mul(-1.)
-        loss_real_drift = 0.001 * pred_real.pow(2.).mean()
+        loss_real_drift = pred_real.pow(2.).mean()
         # D loss - fake data
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
         fake_data = self.G.forward(z)
@@ -157,7 +161,7 @@ class Trainer:
         # D loss - gradient penalty
         gp = self.gradient_penalty(real_data, fake_data)
         # update D
-        D_loss = loss_real + loss_fake + loss_real_drift + gp
+        D_loss = loss_real + loss_fake + self.lambda_drift * loss_real_drift + self.lambda_gp * gp
         W_dist = loss_real.item() + loss_fake.item()
         D_loss.backward()
         self.opt_D.step()
@@ -177,7 +181,6 @@ class Trainer:
         self.opt_G.step()
         return [G_loss.item(), D_loss.item(), W_dist]
     def gradient_penalty(self, real_data, fake_data):
-        LAMBDA = 10.
         alpha = torch.rand(real_data.size(0),1,1,1).to(self.device)
         interpolates = alpha * real_data.detach() + (1 - alpha) * fake_data.detach()
         interpolates.requires_grad_(True)
@@ -185,7 +188,7 @@ class Trainer:
         gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
             grad_outputs=torch.ones_like(disc_interpolates).to(self.device), create_graph=True, retain_graph=True, only_inputs=True)[0]
         gradients = gradients.view(gradients.size(0), -1)
-        gradient_penalty = LAMBDA * gradients.norm(2, dim=1).sub(1.).pow(2.).mean()
+        gradient_penalty = gradients.norm(2, dim=1).sub(1.).pow(2.).mean()
         return gradient_penalty
     def train(self):
         global_step = 0
