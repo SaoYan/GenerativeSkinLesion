@@ -12,16 +12,14 @@ class EqualizedConv2d(nn.Module):
         self.bias = bias
         self.stride = stride
         self.padding = padding
-        self.weight_param = nn.Parameter(nn.init.normal_(
-            torch.empty(out_features, in_features, kernel_size, kernel_size)
-        ))
+        self.weight_param = nn.Parameter(torch.FloatTensor(out_features, in_features, kernel_size, kernel_size).normal_(0.0, 1.0))
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = kernel_size * kernel_size * in_features
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv2d(input=x,
-                        weight=self.weight_param * self.scale,  # scale the weight on runtime
+                        weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
                         bias=self.bias_param if self.bias else None,
                         stride=self.stride, padding=self.padding)
 
@@ -31,16 +29,14 @@ class EqualizedDeconv2d(nn.Module):
         self.bias = bias
         self.stride = stride
         self.padding = padding
-        self.weight_param = nn.Parameter(nn.init.normal_(
-            torch.empty(in_features, out_features, kernel_size, kernel_size)
-        ))
+        self.weight_param = nn.Parameter(torch.FloatTensor(in_features, out_features, kernel_size, kernel_size).normal_(0.0, 1.0))
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = in_features
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv_transpose2d(input=x,
-                                  weight=self.weight_param * self.scale,  # scale the weight on runtime
+                                  weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
                                   bias=self.bias_param if self.bias else None,
                                   stride=self.stride, padding=self.padding)
 
@@ -48,16 +44,14 @@ class EqualizedLinear(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super(EqualizedLinear, self).__init__()
         self.bias = bias
-        self.weight_param = nn.Parameter(nn.init.normal_(
-            torch.empty(out_features, in_features)
-        ))
+        self.weight_param = nn.Parameter(torch.FloatTensor(out_features, in_features).normal_(0.0, 1.0))
         if self.bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
         fan_in = in_features
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         N = x.size(0)
-        return F.linear(input=x.view(N,-1), weight=self.weight_param * self.scale,
+        return F.linear(input=x.view(N,-1), weight=self.weight_param.mul(self.scale),
                         bias=self.bias_param if self.bias else None)
 
 #----------------------------------------------------------------------------
