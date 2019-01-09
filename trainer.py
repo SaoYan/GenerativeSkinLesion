@@ -41,7 +41,7 @@ class Trainer:
         self.device_ids = device_ids
         self.writer = SummaryWriter(self.outf)
         self.init_trainer()
-        print("\ndone\n")
+        print("done\n")
     def init_trainer(self):
         # networks
         self.G = Generator(nc=self.nc, nz=self.nz, size=self.size)
@@ -66,7 +66,7 @@ class Trainer:
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor()
         ])
-        self.dataset = ISIC_GAN('train_gan.csv', shuffle=True, transform=self.transform)
+        self.dataset = ISIC_GAN('train_gan.csv', transform=self.transform)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size,
             shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
         # tickers (used for fading in)
@@ -210,9 +210,8 @@ class Trainer:
                     for i, data in enumerate(self.dataloader, 0):
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
-                        real_data_current = data
-                        real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
-                        if stage > 1:
+                        real_data_current = F.adaptive_avg_pool2d(data, current_size)
+                        if stage > 1 and current_alpha < 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
                             real_data = (1 - current_alpha) * real_data_previous + current_alpha * real_data_current
                         else:
