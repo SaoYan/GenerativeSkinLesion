@@ -41,15 +41,15 @@ if __name__ == "__main__":
     # network training
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--unit_epoch", type=int, default=50)
-    parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
+    parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
     parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
     arg = parser.parse_args()
 
     if arg.preprocess:
-        # preprocess_data_gan('../data_2018/Train/MEL')
-        preprocess_data_gan('../data_2017/Train/melanoma')
+        preprocess_data_gan('../data_2018/Train/MEL')
+        # preprocess_data_gan('../data_2017/Train/melanoma')
 
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":
