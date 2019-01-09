@@ -172,7 +172,7 @@ class Trainer:
         gp = self.gradient_penalty(real_data, fake_data)
         # update D
         D_loss = loss_fake - loss_real + loss_real_drift + gp
-        Wasserstein_Dist = loss_fake.item() - loss_real.item()
+        W_dist = loss_fake.item() - loss_real.item()
         D_loss.backward()
         self.opt_D.step()
         ##########
@@ -188,7 +188,7 @@ class Trainer:
         G_loss = pred_fake.mean().mul(-1.)
         G_loss.backward()
         self.opt_G.step()
-        return [G_loss.item(), D_loss.item(), Wasserstein_Dist]
+        return [G_loss.item(), D_loss.item(), W_dist]
     def gradient_penalty(self, real_data, fake_data):
         LAMBDA = 10.
         alpha = torch.rand(real_data.size(0),1,1,1).to(self.device)
@@ -229,12 +229,12 @@ class Trainer:
                             real_data = real_data_current
                         real_data = real_data.mul(2.).sub(1.) # [0,1] --> [-1,1]
                         real_data = real_data.to(self.device)
-                        G_loss, D_loss, Wasserstein_Dist = self.update_network(real_data)
+                        G_loss, D_loss, W_dist = self.update_network(real_data)
                         self.update_moving_average()
                         if i % 10 == 0:
                             self.writer.add_scalar('train/G_loss', G_loss, global_step)
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
-                            self.writer.add_scalar('train/Wasserstein_Dist', Wasserstein_Dist, global_step)
+                            self.writer.add_scalar('train/W_dist', W_dist, global_step)
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
                                 .format(stage, total_stages, epoch+1, M, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, Wasserstein_Dist))
                         global_step += 1
