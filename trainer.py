@@ -147,7 +147,7 @@ class Trainer:
         self.opt_D.zero_grad()
         # D loss - real data
         pred_real = self.D.forward(real_data)
-        loss_real = pred_real.mean()
+        loss_real = pred_real.mean().mul(-1.)
         loss_real_drift = 0.001 * pred_real.pow(2.).mean()
         # D loss - fake data
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
@@ -157,8 +157,8 @@ class Trainer:
         # D loss - gradient penalty
         gp = self.gradient_penalty(real_data, fake_data)
         # update D
-        D_loss = loss_fake - loss_real + loss_real_drift + gp
-        W_dist = loss_fake.item() - loss_real.item()
+        D_loss = loss_real + loss_fake + loss_real_drift + gp
+        W_dist = loss_real.item() + loss_fake.item()
         D_loss.backward()
         self.opt_D.step()
         ##########
