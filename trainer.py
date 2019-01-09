@@ -68,12 +68,6 @@ class Trainer:
         # tickers (used for fading in)
         self.tickers = self.unit_epoch * self.num_aug * len(self.dataloader)
     def update_trainer(self, stage, inter_ticker):
-        """
-        update status of trainer
-        :param stage: stage number; starting from 1
-        :param inter_ticker: ticker number within the current stage; starting from 0 within each stage
-        :return current_alpha: value of alpha (parameter for fade in) after updating trainer
-        """
         if stage == 1:
             current_alpha = 0
         else:
@@ -134,11 +128,8 @@ class Trainer:
                 self.opt_D.load_state_dict(opt_D_state_dict)
         return current_alpha
     def update_moving_average(self, decay=0.999):
-        """
-        update exponential running average (EMA) for the weights of the generator
-        :param decay: the EMA is computed as W_EMA_t = decay * W_EMA_{t-1} + (1-decay) * W_G
-        :return : None
-        """
+        # update exponential running average (EMA) for the weights of the generator
+        # W_EMA_t = decay * W_EMA_{t-1} + (1-decay) * W_G
         with torch.no_grad():
             param_dict_G = dict(self.G.module.named_parameters())
             for name, param_EMA in self.G_EMA.named_parameters():
@@ -146,11 +137,6 @@ class Trainer:
                 assert (param_G is not param_EMA)
                 param_EMA.copy_(decay * param_EMA + (1. - decay) * param_G.detach().cpu())
     def update_network(self, real_data):
-        """
-        perform one step of gradient descent
-        :param real_data: batch of real image; the dynamic range must has been adjusted to [-1,1]
-        :return [G_loss, D_loss, Wasserstein_Dist]
-        """
         # switch to training mode
         self.G.train(); self.D.train()
         ##########
@@ -185,6 +171,7 @@ class Trainer:
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
         fake_data = self.G.forward(z)
         pred_fake = self.D.forward(fake_data)
+        # update G
         G_loss = pred_fake.mean().mul(-1.)
         G_loss.backward()
         self.opt_G.step()
@@ -236,7 +223,7 @@ class Trainer:
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
                             self.writer.add_scalar('train/W_dist', W_dist, global_step)
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
-                                .format(stage, total_stages, epoch+1, M, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, Wasserstein_Dist))
+                                .format(stage, total_stages, epoch+1, M, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, W_dist))
                         global_step += 1
                         ticker += 1
                 global_epoch += 1
