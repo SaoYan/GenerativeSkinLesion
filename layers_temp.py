@@ -9,7 +9,7 @@ import torch.nn.functional as F
 class EqualizedConv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
         super(EqualizedConv2d, self).__init__()
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias)
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=bias)
         nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
         nn.init.constant_(self.conv.bias, 0.)
     def forward(self, x):
@@ -18,7 +18,7 @@ class EqualizedConv2d(nn.Module):
 class EqualizedDeconv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
         super(EqualizedDeconv2d, self).__init__()
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias)
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias=bias)
         nn.init.kaiming_normal_(self.deconv.weight, a=nn.init.calculate_gain('conv2d'))
         nn.init.constant_(self.deconv.bias, 0.)
     def forward(self, x):
@@ -27,11 +27,11 @@ class EqualizedDeconv2d(nn.Module):
 class EqualizedLinear(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super(EqualizedLinear, self).__init__()
-        self.linear = nn.Linear(in_features, out_features, bias)
+        self.linear = nn.Linear(in_features, out_features, bias=bias)
         nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
         nn.init.constant_(self.linear.bias, 0.)
     def forward(self, x):
-        return self.linear(x)
+        return self.linear(x.view(x.size(0),-1))
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.

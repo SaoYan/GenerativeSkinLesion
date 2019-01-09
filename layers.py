@@ -11,13 +11,15 @@ class EqualizedConv2d(nn.Module):
         super(EqualizedConv2d, self).__init__()
         self.bias = bias
         self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=False)
-        nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
+        temp = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=False)
+        nn.init.kaiming_normal_(temp.weight, a=nn.init.calculate_gain('conv2d'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.conv.weight.data.pow(2.).mean().sqrt().item()
-        self.conv.weight.data.copy_(self.conv.weight.data.div(self.scale))
+        self.scale = temp.weight.data.pow(2.).mean().sqrt().item()
+        self.conv.weight.data.copy_(temp.weight.data.div(self.scale))
     def forward(self, x):
-        x = self.conv(x.mul(self.scale))
+        x = x.mul(self.scale)
+        x = self.conv(x)
         if self.bias:
             return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
         return x
@@ -27,13 +29,15 @@ class EqualizedDeconv2d(nn.Module):
         super(EqualizedDeconv2d, self).__init__()
         self.bias = bias
         self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias=False)
-        nn.init.kaiming_normal_(self.deconv.weight, a=nn.init.calculate_gain('conv2d'))
+        temp = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias=False)
+        nn.init.kaiming_normal_(temp.weight, a=nn.init.calculate_gain('conv2d'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.deconv.weight.data.pow(2.).mean().sqrt().item()
-        self.deconv.weight.data.copy_(self.deconv.weight.data.div(self.scale))
+        self.scale = temp.weight.data.pow(2.).mean().sqrt().item()
+        self.deconv.weight.data.copy_(temp.weight.data.div(self.scale))
     def forward(self, x):
-        x = self.deconv(x.mul(self.scale))
+        x = x.mul(self.scale)
+        x = self.deconv(x)
         if self.bias:
             return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
         return x
@@ -43,14 +47,15 @@ class EqualizedLinear(nn.Module):
         super(EqualizedLinear, self).__init__()
         self.bias = bias
         self.linear = nn.Linear(in_features, out_features, bias=False)
-        nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
+        temp = nn.Linear(in_features, out_features, bias=False)
+        nn.init.kaiming_normal_(temp.weight, a=nn.init.calculate_gain('linear'))
         if bias:
             self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.linear.weight.data.pow(2.).mean().sqrt().item()
-        self.linear.weight.data.copy_(self.linear.weight.data.div(self.scale))
+        self.scale = temp.weight.data.pow(2.).mean().sqrt().item()
+        self.linear.weight.data.copy_(temp.weight.data.div(self.scale))
     def forward(self, x):
-        N = x.size(0)
-        x = self.linear(x.view(N,-1).mul(self.scale))
+        x = x.mul(self.scale)
+        x = self.linear(x.view(x.size(0),-1))
         if self.bias:
             return x + self.bias_param.view(1, -1).expand_as(x)
         return x
