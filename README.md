@@ -4,7 +4,7 @@ Using [progressive gorwing of GANs](https://arxiv.org/abs/1710.10196) to augment
 
 This project was originated as SFU CMPT-726 (18 Fall) course project. Collaborator: [Yongjun He](https://github.com/Nju141250047), [Ruochen Jiang](https://github.com/VHUCXAONG).   
 
-![](https://github.com/SaoYan/GenerativeSkinLesion/blob/master/all_images.png)   
+![](https://github.com/SaoYan/GenerativeSkinLesion/blob/master/sample_images.png)   
 
 ***
 
@@ -24,7 +24,17 @@ This may not be full implementation of progressive GANs, and we haven't run the 
 
 ## Training  
 
+```
+python main.py --mode train
+```
+
+The training taks about 4 days on 4 NVIDIA P100 Pascal GPUs.  
+
 ## (After training) Generating  
+
+```
+python main.py --mode test --num 1000
+```
 
 ## Acknowledgement  
 

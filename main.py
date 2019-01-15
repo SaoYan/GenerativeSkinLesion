@@ -47,6 +47,9 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
+    # inference
+    parser.add_argument("--num", type=int, default=1000, help="number of images to generate")
+
     arg = parser.parse_args()
 
     if arg.preprocess:
@@ -59,4 +62,4 @@ if __name__ == "__main__":
         gan_trainer.train()
     if arg.mode == "test":
         gan_generator = ImageGenerator(arg, device)
-        gan_generator.generate(1000)
+        gan_generator.generate(arg.num)
