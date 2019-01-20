@@ -179,8 +179,8 @@ def main():
                     responses = [responses[i] for i in range(responses.shape[0])]
                     csv_writer.writerows(responses)
             # log scalars
-            precision, recall, precision_mel, recall_mel = compute_mean_pecision_recall('test_results.csv')
-            mAP, AUC, ROC = compute_metrics('test_results.csv')
+            precision, recall, precision_mel, recall_mel = compute_mean_pecision_recall('test_results.csv', 'test.csv')
+            mAP, AUC, ROC = compute_metrics('test_results.csv', 'test.csv')
             writer.add_scalar('test/accuracy', correct/total, epoch)
             writer.add_scalar('test/mean_precision', precision, epoch)
             writer.add_scalar('test/mean_recall', recall, epoch)
