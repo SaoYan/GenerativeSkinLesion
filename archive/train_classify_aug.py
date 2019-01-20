@@ -36,7 +36,7 @@ parser.add_argument("--outf", type=str, default="logs", help='path of log files'
 
 opt = parser.parse_args()
 
-def __worker_init_fn__():
+def _worker_init_fn_():
     torch_seed = torch.initial_seed()
     np_seed = torch_seed // 2**32-1
     random.seed(torch_seed)
@@ -65,7 +65,8 @@ def main():
         transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
     trainset = ISIC(csv_file='train.csv', shuffle=True, rotate=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.batch_size, shuffle=True, num_workers=8, worker_init_fn=__worker_init_fn__())
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.batch_size, shuffle=True,
+        num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
     testset = ISIC(csv_file='test.csv', shuffle=False, rotate=False, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False, num_workers=8)
     print('\ndone\n')
