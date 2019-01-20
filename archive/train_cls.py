@@ -13,7 +13,7 @@ import torchvision
 import torchvision.utils as utils
 import torchvision.transforms as transforms
 from networks import VGG, ResNet
-from data import preprocess_data_classify, ISIC
+from data_cls import preprocess_data, ISIC
 from utilities import *
 from transforms import *
 
@@ -56,6 +56,7 @@ def main():
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
+        # transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
     transform_test = transforms.Compose([
         RatioCenterCrop(1.),
@@ -63,11 +64,12 @@ def main():
         transforms.CenterCrop(im_size),
         transforms.ToTensor(),
         transforms.Normalize((0.6901, 0.5442, 0.4867), (0.0810, 0.1118, 0.1266)) # without aug
+        # transforms.Normalize((0.7216, 0.5598, 0.4962), (0.0889, 0.1230, 0.1390)) # with aug
     ])
-    trainset = ISIC(csv_file='train_oversample.csv', shuffle=True, transform=transform_train)
+    trainset = ISIC(csv_file='train_oversample.csv', transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.batch_size, shuffle=True,
         num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
-    testset = ISIC(csv_file='test.csv', shuffle=False, transform=transform_test)
+    testset = ISIC(csv_file='test.csv', transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False, num_workers=8)
     print('\ndone\n')
     '''
