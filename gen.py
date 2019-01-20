@@ -31,6 +31,7 @@ class ImageGenerator:
         max_val = torch.max(tensor)
         return (tensor - min_val) / (max_val - min_val)
     def generate(self, num):
+        os.mkdir('Images_Gen')
         with torch.no_grad():
             for n in range(num):
                 z = torch.FloatTensor(1, 512).normal_(0.0, 1.0).to(self.device)

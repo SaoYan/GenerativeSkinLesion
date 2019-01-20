@@ -19,7 +19,7 @@ class EqualizedConv2d(nn.Module):
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv2d(input=x,
-                        weight=self.weight_param * self.scale,
+                        weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
                         bias=self.bias_param if self.bias else None,
                         stride=self.stride, padding=self.padding)
 
@@ -36,7 +36,7 @@ class EqualizedDeconv2d(nn.Module):
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         return F.conv_transpose2d(input=x,
-                                  weight=self.weight_param * self.scale,
+                                  weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
                                   bias=self.bias_param if self.bias else None,
                                   stride=self.stride, padding=self.padding)
 
@@ -51,7 +51,7 @@ class EqualizedLinear(nn.Module):
         self.scale = math.sqrt(2. / fan_in)
     def forward(self, x):
         N = x.size(0)
-        return F.linear(input=x.view(N,-1), weight=self.weight_param * self.scale,
+        return F.linear(input=x.view(N,-1), weight=self.weight_param.mul(self.scale),
                         bias=self.bias_param if self.bias else None)
 
 #----------------------------------------------------------------------------

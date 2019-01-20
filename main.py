@@ -43,18 +43,15 @@ if __name__ == "__main__":
     parser.add_argument("--unit_epoch", type=int, default=50, help="number of transition epochs")
     parser.add_argument("--lambda_gp", type=float, default=10., help="weight of gradient penalty in WGAN")
     parser.add_argument("--lambda_drift", type=float, default=0.001, help="weight of drift term in D_loss")
-    parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
+    parser.add_argument("--num_aug", type=int, default=10, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
     parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
-
-    # inference
-    parser.add_argument("--num", type=int, default=1000, help="number of images to generate")
 
     arg = parser.parse_args()
 
     if arg.preprocess:
-        preprocess_data_gan('../data_2018/Train/MEL')
-        # preprocess_data_gan('../data_2017/Train/melanoma')
+        # preprocess_data_gan('../data_2018/Train/MEL')
+        preprocess_data_gan('../data_2017/Train/melanoma')
 
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":
@@ -62,4 +59,4 @@ if __name__ == "__main__":
         gan_trainer.train()
     if arg.mode == "test":
         gan_generator = ImageGenerator(arg, device)
-        gan_generator.generate(arg.num)
+        gan_generator.generate(1122)

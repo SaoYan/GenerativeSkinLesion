@@ -7,39 +7,45 @@ import numpy as np
 import torch
 import torch.utils.data as udata
 
-def preprocess_data(root_dir, seg_dir='Train_Lesion'):
+def preprocess_data(root_dir, generative=False):
     print('pre-processing data ...\n')
-    # training data
-    melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg')); melanoma.sort()
-    nevus    = glob.glob(os.path.join(root_dir, 'Train', 'nevus', '*.jpg')); nevus.sort()
-    sk       = glob.glob(os.path.join(root_dir, 'Train', 'seborrheic_keratosis', '*.jpg')); sk.sort()
-    with open('train.csv', 'wt', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
-        for k in range(len(melanoma)):
-            filename = melanoma[k]
-            writer.writerow([filename] + ['1'])
-        for k in range(len(nevus)):
-            filename = nevus[k]
-            writer.writerow([filename] + ['0'])
-        for k in range(len(sk)):
-            filename = sk[k]
-            writer.writerow([filename] + ['0'])
-    # training data oversample
-    melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg')); melanoma.sort()
-    nevus    = glob.glob(os.path.join(root_dir, 'Train', 'nevus', '*.jpg')); nevus.sort()
-    sk       = glob.glob(os.path.join(root_dir, 'Train', 'seborrheic_keratosis', '*.jpg')); sk.sort()
-    with open('train_oversample.csv', 'wt', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
-        for i in range(4):
+    # training data - GAN augmentation
+    if generative:
+        melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg')); melanoma.sort()
+        nevus    = glob.glob(os.path.join(root_dir, 'Train', 'nevus', '*.jpg')); nevus.sort()
+        sk       = glob.glob(os.path.join(root_dir, 'Train', 'seborrheic_keratosis', '*.jpg')); sk.sort()
+        gen      = glob.glob(os.path.join(root_dir, 'Gen', '*.jpg')); gen.sort()
+        with open('train.csv', 'wt', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=',')
             for k in range(len(melanoma)):
                 filename = melanoma[k]
                 writer.writerow([filename] + ['1'])
-        for k in range(len(nevus)):
-            filename = nevus[k]
-            writer.writerow([filename] + ['0'])
-        for k in range(len(sk)):
-            filename = sk[k]
-            writer.writerow([filename] + ['0'])
+            for k in range(len(gen)):
+                filename = gen[k]
+                writer.writerow([filename] + ['1'])
+            for k in range(len(nevus)):
+                filename = nevus[k]
+                writer.writerow([filename] + ['0'])
+            for k in range(len(sk)):
+                filename = sk[k]
+                writer.writerow([filename] + ['0'])
+    # training data - oversample
+    if not generative:
+        melanoma = glob.glob(os.path.join(root_dir, 'Train', 'melanoma', '*.jpg')); melanoma.sort()
+        nevus    = glob.glob(os.path.join(root_dir, 'Train', 'nevus', '*.jpg')); nevus.sort()
+        sk       = glob.glob(os.path.join(root_dir, 'Train', 'seborrheic_keratosis', '*.jpg')); sk.sort()
+        with open('train.csv', 'wt', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=',')
+            for i in range(4):
+                for k in range(len(melanoma)):
+                    filename = melanoma[k]
+                    writer.writerow([filename] + ['1'])
+            for k in range(len(nevus)):
+                filename = nevus[k]
+                writer.writerow([filename] + ['0'])
+            for k in range(len(sk)):
+                filename = sk[k]
+                writer.writerow([filename] + ['0'])
     # val data
     melanoma = glob.glob(os.path.join(root_dir, 'Val', 'melanoma', '*.jpg')); melanoma.sort()
     nevus    = glob.glob(os.path.join(root_dir, 'Val', 'nevus', '*.jpg')); nevus.sort()

@@ -214,10 +214,9 @@ class VGG(nn.Module):
 
     def forward(self, x):
         N = x.size(0)
-        feature = self.features(x).view(N,-1)
-        dense = self.dense(feature)
-        out = self.classifier(dense)
-        return out
+        x = self.features(x).view(N,-1)
+        x = self.dense(x)
+        return self.classifier(x)
 
 #----------------------------------------------------------------------------
 # Classifier: ResNet-50
