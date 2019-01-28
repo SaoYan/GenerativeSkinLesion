@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
     # inference
-	parser.add_argument("--num", type=int, default=1122, help="number of images to generate")
+    parser.add_argument("--num", type=int, default=1122, help="number of images to generate")
 
     arg = parser.parse_args()
 
