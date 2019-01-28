@@ -35,7 +35,7 @@ class ImageGenerator:
         with torch.no_grad():
             for n in range(num):
                 z = torch.FloatTensor(1, 512).normal_(0.0, 1.0).to(self.device)
-                generate_data = self.G.forward(z)
+                generate_data = self.G(z)
                 image = generate_data.to('cpu').squeeze()
                 image = self.normalize_tensor(image)
                 image = np.transpose(image.numpy(), (1,2,0))
