@@ -11,7 +11,6 @@ from data_gan import preprocess_data_gan
 # training time: ~4d
 # stage 1: 50 epoch
 # stage 2-7: 50 epoch transition + 50 epoch stability
-# stage 5-7: 50 epoch transition + 100 epoch stability
 ###
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -44,13 +43,13 @@ if __name__ == "__main__":
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
     # inference
-    parser.add_argument("--num", type=int, default=1122, help="number of images to generate")
+    parser.add_argument("--num", type=int, default=1000, help="number of images to generate")
 
     arg = parser.parse_args()
 
     if arg.preprocess:
-        # preprocess_data_gan('../data_2018/Train/MEL')
-        preprocess_data_gan('../data_2017/Train/melanoma')
+        preprocess_data_gan('../data_2018/Train/MEL')
+        # preprocess_data_gan('../data_2017/Train/melanoma')
 
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":

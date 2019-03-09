@@ -196,15 +196,10 @@ class Trainer:
         total_stages = int(math.log2(self.size/self.init_size)) + 1
         fixed_z = torch.FloatTensor(self.batch_size, self.nz).normal_(0.0, 1.0).to('cpu')
         for stage in range(1, total_stages+1):
-            if stage == 1:
-                M = self.unit_epoch
-            elif stage <= 4:
-                M = self.unit_epoch * 2
-            else:
-                M = self.unit_epoch * 3
+            eps = self.unit_epoch if stage == 1 else self.unit_epoch * 2
             current_size = self.init_size * (2 ** (stage-1))
             ticker = 0
-            for epoch in range(M):
+            for epoch in range(eps):
                 torch.cuda.empty_cache()
                 for aug in range(self.num_aug):
                     for i, data in enumerate(self.dataloader, 0):
@@ -226,7 +221,7 @@ class Trainer:
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
                             self.writer.add_scalar('train/W_dist', W_dist, global_step)
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
-                                .format(stage, total_stages, epoch+1, M, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, W_dist))
+                                .format(stage, total_stages, epoch+1, eps, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, W_dist))
                         global_step += 1
                         ticker += 1
                 global_epoch += 1
