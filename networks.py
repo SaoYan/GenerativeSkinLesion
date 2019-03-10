@@ -225,7 +225,7 @@ class Discriminator(nn.Module):
         self.model = new_model
     def forward(self, x):
         assert len(x.size()) == 4, 'Invalid input size!'
-        x = self.mnodel(x)
+        x = self.model(x)
         dis = self.dis(x)
         cls = None
         if self.cond:

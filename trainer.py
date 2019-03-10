@@ -153,13 +153,13 @@ class Trainer:
         self.D.zero_grad()
         self.opt_D.zero_grad()
         # D loss - real data
-        pred_real = self.D(real_data)
+        pred_real, __ = self.D(real_data)
         loss_real = pred_real.mean().mul(-1.)
         loss_real_drift = pred_real.pow(2.).mean()
         # D loss - fake data
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
         fake_data = self.G(z)
-        pred_fake = self.D(fake_data.detach())
+        pred_fake, __ = self.D(fake_data.detach())
         loss_fake = pred_fake.mean()
         # D loss - gradient penalty
         gp = self.gradient_penalty(real_data, fake_data)
@@ -177,7 +177,7 @@ class Trainer:
         # G loss
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
         fake_data = self.G(z)
-        pred_fake = self.D(fake_data)
+        pred_fake, __ = self.D(fake_data)
         # update G
         G_loss = pred_fake.mean().mul(-1.)
         G_loss.backward()
@@ -187,7 +187,7 @@ class Trainer:
         alpha = torch.rand(real_data.size(0),1,1,1).to(self.device)
         interpolates = alpha * real_data.detach() + (1 - alpha) * fake_data.detach()
         interpolates.requires_grad_(True)
-        disc_interpolates = self.D(interpolates)
+        disc_interpolates, __ = self.D(interpolates)
         gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
             grad_outputs=torch.ones_like(disc_interpolates).to(self.device), create_graph=True, retain_graph=True, only_inputs=True)[0]
         gradients = gradients.view(gradients.size(0), -1)
