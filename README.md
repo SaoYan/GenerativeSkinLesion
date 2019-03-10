@@ -22,7 +22,7 @@ This may not be full implementation of progressive GANs, and we haven't run the 
 * [Pillow](https://github.com/python-pillow/Pillow)  
 
 ## Data  
-*Melanoma* image in ISIC 2017 or ISIC 2018 classification task.  
+ISIC 2018 classification task.  
 
 ## Training  
 

@@ -3,7 +3,7 @@ import torch
 import argparse
 from trainer import Trainer
 from gen import ImageGenerator
-from data_gan import preprocess_data_gan
+from data import preprocess_data
 
 ###
 # training:
@@ -28,10 +28,11 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=str, default="train", help="train / test")
 
     # network architecture
-    parser.add_argument("--nc", type=int, default=3, help="number of channels of the generated image")
+    parser.add_argument("--nc", type=int, default=5, help="number of channels of the generated image")
     parser.add_argument("--nz", type=int, default=512, help="dimension of the input noise")
     parser.add_argument("--init_size", type=int, default=4, help="the initial size of the generated image")
     parser.add_argument("--size", type=int, default=256, help="the final size of the generated image")
+    parser.add_argument("--cond", action="store_true", help="conditional GAN")
 
     # network training
     parser.add_argument("--batch_size", type=int, default=16, help="batch size")
@@ -48,8 +49,7 @@ if __name__ == "__main__":
     arg = parser.parse_args()
 
     if arg.preprocess:
-        preprocess_data_gan('../data_2018/Train/MEL')
-        # preprocess_data_gan('../data_2017/Train/melanoma')
+        preprocess_data(root_dir='../data_2018', mel_only=True)
 
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":

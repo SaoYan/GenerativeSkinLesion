@@ -5,7 +5,7 @@ import torchvision.models as models
 from layers_ import *
 
 #----------------------------------------------------------------------------
-# Auxiliary functions.
+# helper functions
 
 def conv_block(layers, in_features, out_features, kernel_size, stride, padding, pixel_norm):
     layers.append(EqualizedConv2d(in_features, out_features, kernel_size, stride, padding))
@@ -39,12 +39,29 @@ def deepcopy_exclude(module, exclude_name):
             new_module[-1].load_state_dict(m.state_dict()) # copy weights
     return new_module
 
+def one_hot_encode(labels, num_classes, size):
+    # embedding
+    embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=num_classes)
+    embedding.weight.data = torch.eye(num_classes)
+    embedding.weight.requires_grad_(False)
+    # one-hot embedding
+    N = labels.size(0)
+    cond = embedding(labels.view(-1)) # N --> N x C
+    cond = cond.view(N, num_classes, 1, 1).expand(N, num_classes, size, size)
+    return cond.detach()
+
+
+#----------------------------------------------------------------------------
+# generator
+
 class Generator(nn.Module):
-    def __init__(self, nc=3, nz=512, size=256):
+    def __init__(self, nc=3, nz=512, size=256, cond=False, num_classes=7):
         super(Generator, self).__init__()
         self.nc = nc # number of channels of the generated image
         self.nz = nz # dimension of the input noise
         self.size = size # the final size of the generated image
+        self.cond = cond # true: conditional gan
+        self.num_classes = num_classes
         self.stages = int(math.log2(self.size/4)) + 1 # the total number of stages (7 when size=256)
         self.current_stage = 1
         self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), self.nz) # the number of channels in a particular stage
@@ -58,8 +75,10 @@ class Generator(nn.Module):
     def first_block(self):
         layers = []
         ndim = self.nf(self.current_stage)
-        layers.append(PixelwiseNorm()) # normalize latent vectors before feeding them to the network
-        layers = deconv_block(layers, in_features=self.nz, out_features=ndim, kernel_size=4, stride=1, padding=0, pixel_norm=True)
+        if not self.cond:
+            layers.append(PixelwiseNorm()) # normalize latent vectors before feeding them to the network
+        layers = deconv_block(layers, in_features=self.nz+self.num_classes if self.cond else self.nz,
+            out_features=ndim, kernel_size=4, stride=1, padding=0, pixel_norm=True)
         layers = conv_block(layers, in_features=ndim, out_features=ndim, kernel_size=3, stride=1, padding=1, pixel_norm=True)
         return  nn.Sequential(*layers)
     def to_rgb_block(self, ndim):
@@ -92,7 +111,6 @@ class Generator(nn.Module):
         new_model.add_module('concat_block', ConcatTable(old_block, new_block))
         new_model.add_module('fadein', Fadein())
         del self.model
-        # self.model = None
         self.model = new_model
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
@@ -107,25 +125,38 @@ class Generator(nn.Module):
         new_model.add_module(layer_name, new_block[-1])
         new_model.add_module('to_rgb', new_to_rgb[-1])
         del self.model
-        # self.model = None
         self.model = new_model
-    def forward(self, x):
+    def forward(self, x, labels=None):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
         if len(x.size()) == 2:
             x = x.view(x.size(0), x.size(1), 1, 1)
-        return self.model(x)
+        input = x
+        if self.cond:
+            cond = one_hot_encode(labels, self.num_classes, x.size(2))
+            input = torch.cat((cond, x), dim=1)
+        return self.model(input)
+
+
+#----------------------------------------------------------------------------
+# discriminator
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=3, nz=512, size=256):
+    def __init__(self, nc=3, nz=512, size=256, cond=False, num_classes=7):
         super(Discriminator, self).__init__()
         self.nc = nc # number of channels of the input
         self.nz = nz # dimension of G's input noise
         self.size = size # the size of the input image
+        self.cond = cond # true: conditional gan
+        self.num_classes = num_classes
         self.stages = int(math.log2(self.size/4)) + 1 # the total number of stages (7 when size=256)
         self.current_stage = self.stages
         self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), self.nz) # the number of channels in a particular stage
         self.module_names = []
         self.model = self.get_init_D()
+        self.dis = EqualizedLinear(in_features=self.nf(8-self.stages), out_features=1) # discriminate fake and real
+        self.cls = None # classifier
+        if self.cond:
+            self.cls = EqualizedLinear(in_features=self.nf(8-self.stages), out_features=num_classes)
     def get_init_D(self):
         model = nn.Sequential()
         model.add_module('from_rgb', self.from_rgb_block(self.nf(8-self.current_stage)))
@@ -137,7 +168,6 @@ class Discriminator(nn.Module):
         layers.append(MinibatchStddev()) # add minibatch stddev only at the last stage
         layers = conv_block(layers, in_features=ndim+1, out_features=ndim, kernel_size=3, stride=1, padding=1, pixel_norm=False)
         layers = conv_block(layers, in_features=ndim, out_features=ndim, kernel_size=4, stride=1, padding=0, pixel_norm=False)
-        layers.append(EqualizedLinear(in_features=ndim, out_features=1))
         return nn.Sequential(*layers)
     def from_rgb_block(self, ndim):
         layers = []
@@ -175,7 +205,6 @@ class Discriminator(nn.Module):
                 new_model.add_module(name, module)
                 new_model[-1].load_state_dict(module.state_dict())
         del self.model
-        # self.model = None
         self.model = new_model
     def flush_network(self):
         # once the fade in is finished, remove the old block and preserve the new block
@@ -193,41 +222,12 @@ class Discriminator(nn.Module):
                 new_model.add_module(name, module)
                 new_model[-1].load_state_dict(module.state_dict())
         del self.model
-        # self.model = None
         self.model = new_model
     def forward(self, x):
         assert len(x.size()) == 4, 'Invalid input size!'
-        return self.model(x)
-
-#----------------------------------------------------------------------------
-# Classifier: VGG-16
-class VGG(nn.Module):
-    def __init__(self, num_classes):
-        super(VGG, self).__init__()
-        net = models.vgg16_bn(pretrained=True)
-        self.features = net.features
-        self.dense = nn.Sequential(*list(net.classifier.children())[:-1])
-        self.classifier = nn.Linear(in_features=4096, out_features=num_classes, bias=True)
-        # initialize
-        nn.init.normal_(self.classifier.weight, 0., 0.01)
-        nn.init.constant_(self.classifier.bias, 0.)
-
-    def forward(self, x):
-        N = x.size(0)
-        x = self.features(x).view(N,-1)
-        x = self.dense(x)
-        return self.classifier(x)
-
-#----------------------------------------------------------------------------
-# Classifier: ResNet-50
-class ResNet(nn.Module):
-    def __init__(self, num_classes):
-        super(ResNet, self).__init__()
-        self.net = models.resnet50(pretrained=True)
-        self.net.fc = nn.Linear(in_features=2048, out_features=num_classes, bias=True)
-        # initialize
-        nn.init.normal_(self.net.fc.weight, 0., 0.01)
-        nn.init.constant_(self.net.fc.bias, 0.)
-
-    def forward(self, x):
-        return self.net(x)
+        x = self.mnodel(x)
+        dis = self.dis(x)
+        cls = None
+        if self.cond:
+            cls = self.cls(x)
+        return dis, cls

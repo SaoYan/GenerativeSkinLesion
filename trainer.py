@@ -12,7 +12,7 @@ from torchvision import transforms, utils, datasets
 from PIL import Image
 from tensorboardX import SummaryWriter
 from networks import Generator, Discriminator
-from data_gan import ISIC_GAN
+from data import ISIC_GAN, ImbalancedDatasetSampler
 from transforms import *
 
 def _worker_init_fn_():
@@ -29,6 +29,7 @@ class Trainer:
         self.nz = arg.nz
         self.init_size = arg.init_size
         self.size = arg.size
+        self.cond = arg.cond
         # training
         self.batch_size = arg.batch_size
         self.unit_epoch = arg.unit_epoch
@@ -44,8 +45,8 @@ class Trainer:
         print("done\n")
     def init_trainer(self):
         # networks
-        self.G = Generator(nc=self.nc, nz=self.nz, size=self.size)
-        self.D = Discriminator(nc=self.nc, nz=self.nz, size=self.size)
+        self.G = Generator(nc=self.nc, nz=self.nz, size=self.size, cond=self.cond, num_classes=7)
+        self.D = Discriminator(nc=self.nc, nz=self.nz, size=self.size, cond=self.cond, num_classes=7)
         self.G_EMA = copy.deepcopy(self.G)
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=self.device_ids).to(self.device)
@@ -66,9 +67,11 @@ class Trainer:
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor()
         ])
-        self.dataset = ISIC_GAN('train_gan.csv', transform=self.transform)
+        self.dataset = ISIC_GAN('train.csv', transform=self.transform)
+        self.sampler = ImbalancedDatasetSampler(self.dataset) if self.cond else None
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size,
-            shuffle=True, num_workers=8, worker_init_fn=_worker_init_fn_(), drop_last=True)
+            shuffle=False if self.cond else True, sampler=self.sampler,
+            num_workers=8, pin_memory=True, drop_last=True, worker_init_fn=_worker_init_fn_())
         # tickers (used for fading in)
         self.tickers = self.unit_epoch * self.num_aug * len(self.dataloader)
     def update_trainer(self, stage, inter_ticker):
@@ -205,7 +208,7 @@ class Trainer:
                     for i, data in enumerate(self.dataloader, 0):
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
-                        real_data_current = data
+                        real_data_current, __ = data
                         real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
                         if stage > 1 and current_alpha < 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
