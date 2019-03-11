@@ -1,7 +1,7 @@
 import os
 import torch
 import argparse
-from trainer import Trainer
+from trainer import Trainer, CondTrainer
 from gen import ImageGenerator
 from data import preprocess_data
 
@@ -54,7 +54,10 @@ if __name__ == "__main__":
 
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":
-        gan_trainer = Trainer(arg, device, device_ids)
+        if self.cond:
+            gan_trainer = CondTrainer(arg, device, device_ids)
+        else:
+            gan_trainer = Trainer(arg, device, device_ids)
         gan_trainer.train()
     if arg.mode == "test":
         gan_generator = ImageGenerator(arg, device)

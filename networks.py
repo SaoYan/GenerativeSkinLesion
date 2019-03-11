@@ -46,9 +46,9 @@ def one_hot_encode(labels, num_classes, size):
     embedding.weight.requires_grad_(False)
     # one-hot embedding
     N = labels.size(0)
-    cond = embedding(labels.view(-1)) # N --> N x C
-    cond = cond.view(N, num_classes, 1, 1).expand(N, num_classes, size, size)
-    return cond.detach()
+    cond = embedding(labels.long().view(-1)) # N --> N x C
+    cond = cond.repeat(1, 1, size, size)
+    return cond.float().detach()
 
 
 #----------------------------------------------------------------------------
@@ -128,6 +128,7 @@ class Generator(nn.Module):
         self.model = new_model
     def forward(self, x, labels=None):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
+        assert self.cond and (labels is not None), 'Missing labels for conditional GAN!'
         if len(x.size()) == 2:
             x = x.view(x.size(0), x.size(1), 1, 1)
         input = x
