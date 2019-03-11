@@ -39,17 +39,6 @@ def deepcopy_exclude(module, exclude_name):
             new_module[-1].load_state_dict(m.state_dict()) # copy weights
     return new_module
 
-def one_hot_encode(labels, num_classes, size):
-    # embedding
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=num_classes).to(device)
-    nn.init.eye_(embedding.weight)
-    embedding.weight.requires_grad_(False)
-    # one-hot embedding
-    cond = embedding(labels.long().view(-1)) # N --> N x C
-    cond = cond.view(cond.size(0), cond.size(1), 1, 1).repeat(1, 1, size, size)
-    return cond.float().detach()
-
 
 #----------------------------------------------------------------------------
 # generator
@@ -67,6 +56,10 @@ class Generator(nn.Module):
         self.nf = lambda stage: min(int(8192 / (2.0 ** stage)), self.nz) # the number of channels in a particular stage
         self.module_names = []
         self.model = self.get_init_G()
+        # one-hot embedding
+        self.embedding = nn.Embedding(num_embeddings=self.num_classes, embedding_dim=self.num_classes)
+        nn.init.eye_(self.embedding.weight)
+        self.embedding.weight.requires_grad_(False)
     def get_init_G(self):
         model = nn.Sequential()
         model.add_module('stage_{}'.format(self.current_stage), self.first_block())
@@ -126,6 +119,10 @@ class Generator(nn.Module):
         new_model.add_module('to_rgb', new_to_rgb[-1])
         del self.model
         self.model = new_model
+    def one_hot_encode(self, labels, size):
+        # one-hot embedding
+
+        return cond.float().detach()
     def forward(self, x, labels=None):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
         assert self.cond and (labels is not None), 'Missing labels for conditional GAN!'
@@ -133,7 +130,9 @@ class Generator(nn.Module):
             x = x.view(x.size(0), x.size(1), 1, 1)
         input = x
         if self.cond:
-            cond = one_hot_encode(labels, self.num_classes, x.size(2))
+            cond = self.embedding(labels.long().view(-1)) # N --> N x C
+            cond = cond.view(cond.size(0), cond.size(1), 1, 1).repeat(1, 1, x.size(2), x.size(3))
+            cond = cond.float().detach()
             input = torch.cat((cond, x), dim=1)
         return self.model(input)
 
