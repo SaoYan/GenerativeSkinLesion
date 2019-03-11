@@ -41,13 +41,13 @@ def deepcopy_exclude(module, exclude_name):
 
 def one_hot_encode(labels, num_classes, size):
     # embedding
-    embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=num_classes)
-    embedding.weight.data = torch.eye(num_classes)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=num_classes).to(device)
+    nn.init.eye_(embedding.weight)
     embedding.weight.requires_grad_(False)
     # one-hot embedding
-    N = labels.size(0)
     cond = embedding(labels.long().view(-1)) # N --> N x C
-    cond = cond.repeat(1, 1, size, size)
+    cond = cond.view(cond.size(0), cond.size(1), 1, 1).repeat(1, 1, size, size)
     return cond.float().detach()
 
 

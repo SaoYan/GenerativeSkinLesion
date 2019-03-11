@@ -262,6 +262,7 @@ class CondTrainer:
         self.nz = arg.nz
         self.init_size = arg.init_size
         self.size = arg.size
+        self.num_classes = 7
         # training
         self.batch_size = arg.batch_size
         self.unit_epoch = arg.unit_epoch
@@ -277,8 +278,8 @@ class CondTrainer:
         print("done\n")
     def init_trainer(self):
         # networks
-        self.G = Generator(nc=self.nc, nz=self.nz, size=self.size, cond=True, num_classes=7)
-        self.D = Discriminator(nc=self.nc, nz=self.nz, size=self.size, cond=True, num_classes=7)
+        self.G = Generator(nc=self.nc, nz=self.nz, size=self.size, cond=True, num_classes=self.num_classes)
+        self.D = Discriminator(nc=self.nc, nz=self.nz, size=self.size, cond=True, num_classes=self.num_classes)
         self.G_EMA = copy.deepcopy(self.G)
         # move to GPU
         self.G = nn.DataParallel(self.G, device_ids=self.device_ids).to(self.device)
@@ -433,7 +434,10 @@ class CondTrainer:
         global_step = 0
         global_epoch = 0
         total_stages = int(math.log2(self.size/self.init_size)) + 1
-        fixed_z = torch.FloatTensor(self.batch_size, self.nz).normal_(0.0, 1.0).to('cpu')
+        fixed_z = torch.FloatTensor(self.batch_size*self.num_classes, self.nz).normal_(0.0, 1.0).to('cpu')
+        fixed_label = [i for j in range(self.batch_size) for i in range(self.num_classes)]
+        fixed_label.sort()
+        fixed_label = torch.LongTensor(fixed_label).to('cpu')
         for stage in range(1, total_stages+1):
             eps = self.unit_epoch if stage == 1 else self.unit_epoch * 2
             current_size = self.init_size * (2 ** (stage-1))
@@ -445,7 +449,7 @@ class CondTrainer:
                         current_alpha = self.update_trainer(stage, ticker)
                         self.writer.add_scalar('archive/current_alpha', current_alpha, global_step)
                         real_data_current, real_labels = data
-                        fake_labels = torch.LongTensor(np.random.randint(0, 7, real_labels.size(0)))
+                        fake_labels = torch.LongTensor(np.random.randint(0, self.num_classes, real_labels.size(0)))
                         real_data_current = F.adaptive_avg_pool2d(real_data_current, current_size)
                         if stage > 1 and current_alpha < 1:
                             real_data_previous = F.interpolate(F.avg_pool2d(real_data_current, 2), scale_factor=2., mode='nearest')
@@ -474,9 +478,21 @@ class CondTrainer:
                     self.writer.add_image('stage_{}/real'.format(stage), I_real, epoch)
                     with torch.no_grad():
                         self.G_EMA.eval()
-                        fake_data = self.G_EMA(fixed_z)
-                        I_fake = utils.make_grid(fake_data, nrow=4, normalize=True, scale_each=True)
-                        self.writer.add_image('stage_{}/fake'.format(stage), I_fake, epoch)
+                        fake_data = self.G_EMA(fixed_z, fixed_label)
+                        I_fake_MEL   = utils.make_grid(fake_data[0:self.batch_size], nrow=4, normalize=True, scale_each=True)
+                        I_fake_NV    = utils.make_grid(fake_data[self.batch_size:self.batch_size*2], nrow=4, normalize=True, scale_each=True)
+                        I_fake_BCC   = utils.make_grid(fake_data[self.batch_size*2:self.batch_size*3], nrow=4, normalize=True, scale_each=True)
+                        I_fake_AKIEC = utils.make_grid(fake_data[self.batch_size*3:self.batch_size*4], nrow=4, normalize=True, scale_each=True)
+                        I_fake_BKL   = utils.make_grid(fake_data[self.batch_size*4:self.batch_size*5], nrow=4, normalize=True, scale_each=True)
+                        I_fake_DF    = utils.make_grid(fake_data[self.batch_size*5:self.batch_size*6], nrow=4, normalize=True, scale_each=True)
+                        I_fake_VASC  = utils.make_grid(fake_data[self.batch_size*6:self.batch_size*7], nrow=4, normalize=True, scale_each=True)
+                        self.writer.add_image('stage_{}/fake_mel'.format(stage),   I_fake_MEL, epoch)
+                        self.writer.add_image('stage_{}/fake_nv'.format(stage),    I_fake_NV, epoch)
+                        self.writer.add_image('stage_{}/fake_bcc'.format(stage),   I_fake_BCC, epoch)
+                        self.writer.add_image('stage_{}/fake_akiec'.format(stage), I_fake_AKIEC, epoch)
+                        self.writer.add_image('stage_{}/fake_bkl'.format(stage),   I_fake_BKL, epoch)
+                        self.writer.add_image('stage_{}/fake_df'.format(stage),    I_fake_DF, epoch)
+                        self.writer.add_image('stage_{}/fake_vasc'.format(stage),  I_fake_VASC, epoch)
                     # save checkpoints
                     print('\nsaving checkpoints...\n')
                     checkpoint = {
