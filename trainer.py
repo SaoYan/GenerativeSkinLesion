@@ -403,6 +403,7 @@ class CondTrainer:
         D_loss = loss_real + loss_fake + loss_real_cls + loss_fake_cls + \
             self.lambda_drift * loss_real_drift + self.lambda_gp * gp
         W_dist = loss_real.item() + loss_fake.item()
+        D_cls = loss_real_cls.item() + loss_fake_cls.item()
         D_loss.backward()
         self.opt_D.step()
         ##########
@@ -415,11 +416,13 @@ class CondTrainer:
         z = torch.FloatTensor(real_data.size(0), self.nz).normal_(0.0, 1.0).to(self.device)
         fake_data = self.G(z, fake_labels)
         pred_fake, cls_fake = self.D(fake_data)
+        loss_fake_cls = self.cls_loss(cls_fake, fake_labels)
+        G_cls = loss_fake_cls.item()
         # update G
-        G_loss = pred_fake.mean().mul(-1.) + self.cls_loss(cls_fake, fake_labels)
+        G_loss = pred_fake.mean().mul(-1.) + loss_fake_cls
         G_loss.backward()
         self.opt_G.step()
-        return [G_loss.item(), D_loss.item(), W_dist]
+        return [G_loss.item(), D_loss.item(), G_cls, D_cls, W_dist]
     def gradient_penalty(self, real_data, fake_data):
         alpha = torch.rand(real_data.size(0),1,1,1).to(self.device)
         interpolates = alpha * real_data.detach() + (1 - alpha) * fake_data.detach()
@@ -460,11 +463,13 @@ class CondTrainer:
                         real_data = real_data.to(self.device)
                         real_labels = real_labels.to(self.device)
                         fake_labels = fake_labels.to(self.device)
-                        G_loss, D_loss, W_dist = self.update_network(real_data, real_labels, fake_labels)
+                        G_loss, D_loss, G_cls, D_cls, W_dist = self.update_network(real_data, real_labels, fake_labels)
                         self.update_moving_average()
                         if i % 10 == 0:
                             self.writer.add_scalar('train/G_loss', G_loss, global_step)
                             self.writer.add_scalar('train/D_loss', D_loss, global_step)
+                            self.writer.add_scalar('train/G_cls', G_cls, global_step)
+                            self.writer.add_scalar('train/D_cls', D_cls, global_step)
                             self.writer.add_scalar('train/W_dist', W_dist, global_step)
                             print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
                                 .format(stage, total_stages, epoch+1, eps, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, W_dist))
