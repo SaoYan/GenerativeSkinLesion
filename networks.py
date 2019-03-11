@@ -119,17 +119,13 @@ class Generator(nn.Module):
         new_model.add_module('to_rgb', new_to_rgb[-1])
         del self.model
         self.model = new_model
-    def one_hot_encode(self, labels, size):
-        # one-hot embedding
-
-        return cond.float().detach()
     def forward(self, x, labels=None):
         assert len(x.size()) == 2 or len(x.size()) == 4, 'Invalid input size!'
-        assert self.cond and (labels is not None), 'Missing labels for conditional GAN!'
         if len(x.size()) == 2:
             x = x.view(x.size(0), x.size(1), 1, 1)
         input = x
         if self.cond:
+            assert labels is not None, 'Missing labels for conditional GAN!'
             cond = self.embedding(labels.long().view(-1)) # N --> N x C
             cond = cond.view(cond.size(0), cond.size(1), 1, 1).repeat(1, 1, x.size(2), x.size(3))
             cond = cond.float().detach()

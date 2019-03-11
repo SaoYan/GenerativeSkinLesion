@@ -56,6 +56,7 @@ if __name__ == "__main__":
     assert arg.mode == "train" or arg.mode == "test", "invalid argument!"
     if arg.mode == "train":
         if arg.cond:
+            print("\ntrain conditional GAN ...\n")
             gan_trainer = CondTrainer(arg, device, device_ids)
         else:
             gan_trainer = Trainer(arg, device, device_ids)
