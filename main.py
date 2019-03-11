@@ -39,7 +39,8 @@ if __name__ == "__main__":
     parser.add_argument("--unit_epoch", type=int, default=50, help="number of transition epochs")
     parser.add_argument("--lambda_gp", type=float, default=10., help="weight of gradient penalty in WGAN")
     parser.add_argument("--lambda_drift", type=float, default=0.001, help="weight of drift term in D_loss")
-    parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation (num_aug times through the dataset is one actual epoch)")
+    parser.add_argument("--num_aug", type=int, default=5, help="times of data augmentation; \
+        x5 when training unconditional gan (using only mel data); x1 when training conditional gan (using the whole training set)")
     parser.add_argument("--lr", type=float, default=0.001, help="initial learning rate")
     parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 
