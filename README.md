@@ -12,12 +12,13 @@ I wrote an article (in Chinese) to discuss some tricks and implementation detail
 
 Be careful to use the code!  
 
-This may not be full implementation of progressive GANs, and we haven't run the code on that same dataset as the original paper.  
+* This may not be full implementation of progressive GANs, and we haven't run the code on that same dataset as the original paper.  
+* Unsolved issue: the training fails when using PyTorch 1.0. I'm still not sure what difference between 1.0 and 0.4 causes this issue...
 
 ***
 
 ## Dependences  
-* PyTorch (>=0.4.1) with torchvision  
+* PyTorch 0.4 with torchvision  
 * [tensorboardX](https://github.com/lanpa/tensorboardX)  
 * [Pillow](https://github.com/python-pillow/Pillow)  
 

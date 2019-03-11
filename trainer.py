@@ -399,8 +399,8 @@ class CondTrainer:
         # D loss - gradient penalty
         gp = self.gradient_penalty(real_data, fake_data)
         # update D
-        D_loss = loss_real + loss_fake + loss_real_cls + loss_fake_cls
-            + self.lambda_drift * loss_real_drift + self.lambda_gp * gp
+        D_loss = loss_real + loss_fake + loss_real_cls + loss_fake_cls + \
+            self.lambda_drift * loss_real_drift + self.lambda_gp * gp
         W_dist = loss_real.item() + loss_fake.item()
         D_loss.backward()
         self.opt_D.step()
