@@ -471,8 +471,10 @@ class CondTrainer:
                             self.writer.add_scalar('train/G_cls', G_cls, global_step)
                             self.writer.add_scalar('train/D_cls', D_cls, global_step)
                             self.writer.add_scalar('train/W_dist', W_dist, global_step)
-                            print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] G_loss {:.4f} D_loss {:.4f} W_Dist {:.4f}" \
-                                .format(stage, total_stages, epoch+1, eps, aug+1, self.num_aug, i+1, len(self.dataloader), G_loss, D_loss, W_dist))
+                            print("[stage {}/{}][epoch {}/{}][aug {}/{}][iter {}/{}] \
+                                G_loss {:.4f} D_loss {:.4f} G_cls {:.4f} D_cls {:.4f} W_Dist {:.4f}" \
+                                .format(stage, total_stages, epoch+1, eps, aug+1, self.num_aug, i+1, len(self.dataloader), \
+                                G_loss, D_loss, G_cls, D_cls, W_dist))
                         global_step += 1
                         ticker += 1
                 global_epoch += 1
