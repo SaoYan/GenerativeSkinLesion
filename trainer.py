@@ -98,7 +98,7 @@ class Trainer:
                 self.G_EMA.flush_network()
                 flag_opt = True
             else:
-                flag_opt = False;
+                flag_opt = False
             # archive alpha
             try:
                 current_alpha = self.G.module.model.fadein.get_alpha()
@@ -145,7 +145,8 @@ class Trainer:
                 param_EMA.copy_(decay * param_EMA + (1. - decay) * param_G.detach().cpu())
     def update_network(self, real_data):
         # switch to training mode
-        self.G.train(); self.D.train()
+        self.G.train()
+        self.D.train()
         ##########
         ## Train Discriminator
         ##########
@@ -332,7 +333,7 @@ class CondTrainer:
                 self.G_EMA.flush_network()
                 flag_opt = True
             else:
-                flag_opt = False;
+                flag_opt = False
             # archive alpha
             try:
                 current_alpha = self.G.module.model.fadein.get_alpha()
@@ -379,7 +380,8 @@ class CondTrainer:
                 param_EMA.copy_(decay * param_EMA + (1. - decay) * param_G.detach().cpu())
     def update_network(self, real_data, real_labels, fake_labels):
         # switch to training mode
-        self.G.train(); self.D.train()
+        self.G.train()
+        self.D.train()
         ##########
         ## Train Discriminator
         ##########

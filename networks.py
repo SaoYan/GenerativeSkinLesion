@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from layers_ import *
+from layers import *
 
 #----------------------------------------------------------------------------
 # helper functions

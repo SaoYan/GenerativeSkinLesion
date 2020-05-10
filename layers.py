@@ -1,91 +1,85 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 #----------------------------------------------------------------------------
 # Equalized learning rate.
-# reference: https://github.com/akanimax/pro_gan_pytorch/blob/master/pro_gan_pytorch/CustomLayers.py
 
 class EqualizedConv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
         super(EqualizedConv2d, self).__init__()
         self.bias = bias
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size, stride, padding, bias=False)
-        nn.init.kaiming_normal_(self.conv.weight, a=nn.init.calculate_gain('conv2d'))
-        if bias:
-            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.conv.weight.data.detach().pow(2.).mean().sqrt().item()
-        self.conv.weight.data.copy_(self.conv.weight.data.div(self.scale))
-    def forward(self, x):
-        x = x.mul(self.scale)
-        x = self.conv(x)
+        self.stride = stride
+        self.padding = padding
+        self.weight_param = nn.Parameter(torch.FloatTensor(out_features, in_features, kernel_size, kernel_size).normal_(0.0, 1.0))
         if self.bias:
-            return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
-        return x
+            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
+        fan_in = kernel_size * kernel_size * in_features
+        self.scale = math.sqrt(2. / fan_in)
+    def forward(self, x):
+        return F.conv2d(input=x,
+                        weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
+                        bias=self.bias_param if self.bias else None,
+                        stride=self.stride, padding=self.padding)
 
 class EqualizedDeconv2d(nn.Module):
     def __init__(self, in_features, out_features, kernel_size, stride, padding, bias=True):
         super(EqualizedDeconv2d, self).__init__()
         self.bias = bias
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size, stride, padding, bias=False)
-        nn.init.kaiming_normal_(self.deconv.weight, a=nn.init.calculate_gain('conv2d'))
-        if bias:
-            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.deconv.weight.data.detach().pow(2.).mean().sqrt().item()
-        self.deconv.weight.data.copy_(self.deconv.weight.data.div(self.scale))
-    def forward(self, x):
-        x = x.mul(self.scale)
-        x = self.deconv(x)
+        self.stride = stride
+        self.padding = padding
+        self.weight_param = nn.Parameter(torch.FloatTensor(in_features, out_features, kernel_size, kernel_size).normal_(0.0, 1.0))
         if self.bias:
-            return x + self.bias_param.view(1, -1, 1, 1).expand_as(x)
-        return x
+            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
+        fan_in = in_features
+        self.scale = math.sqrt(2. / fan_in)
+    def forward(self, x):
+        return F.conv_transpose2d(input=x,
+                                  weight=self.weight_param.mul(self.scale),  # scale the weight on runtime
+                                  bias=self.bias_param if self.bias else None,
+                                  stride=self.stride, padding=self.padding)
 
 class EqualizedLinear(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super(EqualizedLinear, self).__init__()
         self.bias = bias
-        self.linear = nn.Linear(in_features, out_features, bias=False)
-        nn.init.kaiming_normal_(self.linear.weight, a=nn.init.calculate_gain('linear'))
-        if bias:
-            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
-        self.scale = self.linear.weight.data.detach().pow(2.).mean().sqrt().item()
-        self.linear.weight.data.copy_(self.linear.weight.data.div(self.scale))
-    def forward(self, x):
-        x = x.mul(self.scale)
-        x = self.linear(x.view(x.size(0),-1))
+        self.weight_param = nn.Parameter(torch.FloatTensor(out_features, in_features).normal_(0.0, 1.0))
         if self.bias:
-            return x + self.bias_param.view(1, -1).expand_as(x)
-        return x
+            self.bias_param = nn.Parameter(torch.FloatTensor(out_features).fill_(0))
+        fan_in = in_features
+        self.scale = math.sqrt(2. / fan_in)
+    def forward(self, x):
+        N = x.size(0)
+        return F.linear(input=x.view(N,-1), weight=self.weight_param.mul(self.scale),
+                        bias=self.bias_param if self.bias else None)
 
 #----------------------------------------------------------------------------
 # Minibatch standard deviation.
 # reference: https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L127
 
 class MinibatchStddev(nn.Module):
-    def __init__(self, group_size=4):
+    def __init__(self):
         super(MinibatchStddev, self).__init__()
-        self.group_size = group_size
     def forward(self, x):
-        G = min(self.group_size, x.size(0)) if (x.size(0) % self.group_size == 0) else x.size(0)
-        M = int(x.size(0) / G)
-        y = torch.reshape(x, (G, M, x.size(1), x.size(2), x.size(3)))     # [GMCHW] Split minibatch into M groups of size G.
-        y = y - torch.mean(y, dim=0, keepdim=True)                        # [GMCHW] Subtract mean over group.
-        y = torch.mean(y.pow(2.), dim=0, keepdim=False)                   # [MCHW]  Calc variance over group.
-        y = torch.sqrt(y + 1e-8)                                          # [MCHW]  Calc stddev over group.
-        y = torch.mean(y.view(M,-1), dim=1, keepdim=False).view(M,1,1,1)  # [M111]  Take average over fmaps and pixels.
-        y = y.repeat(G,1,x.size(2), x.size(3))                            # [N1HW]  Replicate over group and pixels.
-        return torch.cat([x, y], 1)                                       # [NCHW]  Append as new fmap.
+        y = x - torch.mean(x, dim=0, keepdim=True)       # [NCHW] Subtract mean over batch.
+        y = torch.mean(y.pow(2.), dim=0, keepdim=False)  # [CHW]  Calc variance over batch.
+        y = torch.sqrt(y + 1e-8)                         # [CHW]  Calc stddev over batch.
+        y = torch.mean(y).view(1,1,1,1)                  # [1111] Take average over fmaps and pixels.
+        y = y.repeat(x.size(0),1,x.size(2),x.size(3))    # [N1HW] Replicate over batch and pixels.
+        return torch.cat([x, y], 1)                      # [N(C+1)HW] Append as new fmap.
 
 #----------------------------------------------------------------------------
 # Pixelwise feature vector normalization.
 # reference: https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L120
 
 class PixelwiseNorm(nn.Module):
-    def __init__(self):
+    def __init__(self, sigma=1e-8):
         super(PixelwiseNorm, self).__init__()
+        self.sigma = sigma # small number for numerical stability
     def forward(self, x):
-        y = torch.mean(x.pow(2.), dim=1, keepdim=True) + 1e-8 # [N1HW]
-        return x.div(y.sqrt())
+        y = x.pow(2.).mean(dim=1, keepdim=True).add(self.sigma).sqrt() # [N1HW]
+        return x.div(y)
 
 #----------------------------------------------------------------------------
 # Smoothly fade in the new layers.
